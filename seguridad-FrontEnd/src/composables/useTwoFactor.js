@@ -1,12 +1,13 @@
 // src/composables/useTwoFactor.js
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 
 export function useTwoFactor() {
   const router = useRouter()
   const authStore = useAuthStore()
-  
+
   const totpCode = ref('')
   const errorMessage = ref('')
   const isLoading = ref(false)
@@ -16,40 +17,26 @@ export function useTwoFactor() {
     errorMessage.value = ''
 
     try {
-      // Simulación de validación exitosa del código
-      if (totpCode.value === '123456') {
-        
-        // 1. Recuperamos el rol del usuario que intentó loguearse
-        const assignedRole = localStorage.getItem('pendingRole') || 'USER'
-        
-        // 2. Simulamos el JWT que entregaría el backend
-        const mockJwt = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.simulacion.${assignedRole}`
-        
-        // 3. Guardamos en el estado global (Pinia)
-        authStore.login(mockJwt, assignedRole)
-        
-        // 4. Limpiamos el rol temporal por seguridad
-        localStorage.removeItem('pendingRole')
+      const response = await api.post('/auth/verify-2fa', {
+        token: totpCode.value
+      })
 
-        // 5. Control de Acceso: Redirección según el RBAC
-        switch (assignedRole) {
-          case 'ADMIN':
-            router.push({ name: 'admin-dashboard' })
-            break
-          case 'AUDITOR':
-            router.push({ name: 'auditor-dashboard' })
-            break
-          case 'USER':
-          default:
-            router.push({ name: 'user-dashboard' })
-            break
-        }
-        
-      } else {
-        errorMessage.value = 'Código TOTP inválido. Intente nuevamente.'
-      }
+      const { access_token, roles } = response.data
+
+      // Update store and local storage
+      authStore.login(access_token, roles[0])
+
+      // Redirect based on role
+      if (roles.includes('ADMIN')) router.push({ name: 'admin-dashboard' })
+      else if (roles.includes('AUDITOR')) router.push({ name: 'auditor-dashboard' })
+      else router.push({ name: 'user-dashboard' })
+
     } catch (error) {
-      errorMessage.value = 'Error al verificar el código.'
+      if (error.response && error.response.data) {
+        errorMessage.value = error.response.data.msg || 'Código TOTP inválido.'
+      } else {
+        errorMessage.value = 'Error al verificar el código.'
+      }
     } finally {
       isLoading.value = false
     }
