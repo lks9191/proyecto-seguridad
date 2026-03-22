@@ -2,25 +2,18 @@
   <div class="login-wrapper">
     <div class="glow-box">
       <h2>Autenticación 2FA</h2>
-      <p class="subtitle">Ingrese el código generado por su aplicación (ej. Google Authenticator).</p>
-      
+      <p class="subtitle">Hemos enviado un código a su correo electrónico institucional. Por favor, ingréselo a
+        continuación.</p>
+
       <form @submit.prevent="verifyCode">
         <div class="input-group">
           <label for="totp">Código de 6 dígitos</label>
-          <input 
-            id="totp" 
-            v-model="totpCode" 
-            type="text" 
-            maxlength="6" 
-            required 
-            placeholder="123456"
-            class="code-input"
-            autocomplete="off"
-          />
+          <input id="totp" v-model="totpCode" type="text" maxlength="6" required placeholder="123456" class="code-input"
+            autocomplete="off" />
         </div>
 
         <p v-if="errorMessage" class="error-msg">{{ errorMessage }}</p>
-        
+
         <button type="submit" :disabled="isLoading">
           {{ isLoading ? 'VERIFICANDO...' : 'ACCEDER AL SISTEMA' }}
         </button>
@@ -60,8 +53,8 @@ const { totpCode, errorMessage, isLoading, verifyCode } = useTwoFactor()
   width: 100%;
   max-width: 380px;
   box-shadow: 0 0 15px rgba(0, 150, 255, 0.4),
-              0 0 30px rgba(0, 150, 255, 0.2),
-              inset 0 0 10px rgba(0, 150, 255, 0.1);
+    0 0 30px rgba(0, 150, 255, 0.2),
+    inset 0 0 10px rgba(0, 150, 255, 0.1);
   border: 1px solid rgba(0, 150, 255, 0.3);
   box-sizing: border-box;
 }
@@ -97,7 +90,8 @@ label {
   font-size: 0.85rem;
   margin-bottom: 0.5rem;
   font-family: sans-serif;
-  text-align: center; /* Centrado para el 2FA */
+  text-align: center;
+  /* Centrado para el 2FA */
 }
 
 /* Input específico para códigos */
@@ -106,12 +100,15 @@ input.code-input {
   border: none;
   border-bottom: 2px solid #444;
   color: #ffffff;
-  font-size: 1.5rem; /* Más grande para números */
+  font-size: 1.5rem;
+  /* Más grande para números */
   padding: 0.5rem 0;
   outline: none;
   transition: border-bottom-color 0.3s;
-  text-align: center; /* Números al centro */
-  letter-spacing: 5px; /* Separación entre números */
+  text-align: center;
+  /* Números al centro */
+  letter-spacing: 5px;
+  /* Separación entre números */
 }
 
 input.code-input:focus {

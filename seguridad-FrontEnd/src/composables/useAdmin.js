@@ -1,72 +1,120 @@
-// src/composables/useAdmin.js
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
+import api from '@/services/api'
 
 export function useAdmin() {
   const authStore = useAuthStore()
   const router = useRouter()
-  
-  // Simulamos una lista de usuarios que vendría de tu backend
+
   const users = ref([])
+  const roles = ref([])
+  const activeSessions = ref([])
+  const sessionHistory = ref([])
   const isLoading = ref(false)
   const message = ref('')
 
-  // Función para cargar usuarios (Simulando una petición GET)
-  const fetchUsers = async () => {
+  const fetchData = async () => {
     isLoading.value = true
     try {
-      // AQUÍ: Futura llamada a tu API con Axios/Fetch enviando el JWT
-      // const response = await api.get('/admin/users')
-      
-      // Datos mockeados para tu demostración
-      setTimeout(() => {
-        users.value = [
-          { id: 1, username: 'lucas.calderon', email: 'lucas@example.com', role: 'ADMIN' },
-          { id: 2, username: 'maria.perez', email: 'maria@example.com', role: 'USER' },
-          { id: 3, username: 'carlos.auditor', email: 'carlos@example.com', role: 'AUDITOR' },
-          { id: 4, username: 'juan.prueba', email: 'juan@example.com', role: 'USER' }
-        ]
-        isLoading.value = false
-      }, 500) // Simulamos medio segundo de latencia de red
+      const [usersRes, rolesRes, sessionsRes, historyRes] = await Promise.all([
+        api.get('/admin/users'),
+        api.get('/admin/roles'),
+        api.get('/admin/sessions'),
+        api.get('/admin/sessions/history')
+      ])
+      users.value = usersRes.data
+      roles.value = rolesRes.data
+      activeSessions.value = sessionsRes.data
+      sessionHistory.value = historyRes.data
     } catch (error) {
-      message.value = 'Error al cargar los usuarios.'
+      console.error(error)
+      message.value = 'Error al cargar datos del panel.'
+    } finally {
       isLoading.value = false
     }
   }
 
-  // Función para cambiar el rol de un usuario (Simulando una petición PUT/PATCH)
-  const changeUserRole = async (userId, newRole) => {
-    // AQUÍ: Futura llamada a tu API
-    // await api.put(`/admin/users/${userId}/role`, { role: newRole })
-    
-    // Actualizamos el estado local para reflejar el cambio en la UI
-    const userIndex = users.value.findIndex(u => u.id === userId)
-    if (userIndex !== -1) {
-      users.value[userIndex].role = newRole
-      message.value = `Rol actualizado a ${newRole} con éxito.`
-      
-      // Limpiamos el mensaje después de 3 segundos
-      setTimeout(() => message.value = '', 3000)
+  const createUser = async (userData) => {
+    try {
+      await api.post('/admin/users', userData)
+      message.value = 'Usuario creado con éxito.'
+      fetchData()
+      return true
+    } catch (error) {
+      message.value = error.response?.data?.msg || 'Error al crear usuario.'
+      return false
     }
   }
 
-  // Función para cerrar sesión y probar el flujo de nuevo
-  const handleLogout = () => {
+  const deleteUser = async (userId) => {
+    if (!confirm('¿Estás seguro de eliminar este usuario?')) return
+    try {
+      await api.delete(`/admin/users/${userId}`)
+      message.value = 'Usuario eliminado.'
+      fetchData()
+    } catch (error) {
+      message.value = 'Error al eliminar usuario.'
+    }
+  }
+
+  const changeUserRole = async (userId, roleName) => {
+    try {
+      await api.post('/admin/assign-role', { user_id: userId, role: roleName })
+      message.value = `Rol ${roleName} asignado correctamente.`
+      fetchData()
+    } catch (error) {
+      message.value = 'Error al asignar rol.'
+    }
+  }
+
+  const updateUser = async (userId, userData) => {
+    try {
+      await api.put(`/admin/users/${userId}`, userData)
+      message.value = 'Usuario actualizado con éxito.'
+      fetchData()
+      return true
+    } catch (error) {
+      message.value = error.response?.data?.msg || 'Error al actualizar usuario.'
+      return false
+    }
+  }
+
+  const createRole = async (roleName) => {
+    try {
+      await api.post('/admin/roles', { name: roleName })
+      message.value = 'Rol creado.'
+      fetchData()
+    } catch (error) {
+      message.value = 'Error al crear rol.'
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      await api.post('/user/logout')
+    } catch (e) {
+      console.error(e)
+    }
     authStore.logout()
     router.push({ name: 'login' })
   }
 
-  // Cargar los usuarios automáticamente cuando la vista se monte
-  onMounted(() => {
-    fetchUsers()
-  })
+  onMounted(fetchData)
 
   return {
     users,
+    roles,
+    activeSessions,
+    sessionHistory,
     isLoading,
     message,
+    createUser,
+    deleteUser,
     changeUserRole,
-    handleLogout
+    updateUser,
+    createRole,
+    handleLogout,
+    refresh: fetchData
   }
 }

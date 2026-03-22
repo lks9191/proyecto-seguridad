@@ -1,46 +1,54 @@
 // src/composables/useLogin.js
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import api from '@/services/api'
 
 export function useLogin() {
   const router = useRouter()
-  
+  const authStore = useAuthStore()
+
   const username = ref('')
   const password = ref('')
+  const role = ref('USER') // Default role selected
   const errorMessage = ref('')
   const isLoading = ref(false)
-
-  // Base de datos simulada de usuarios para tus pruebas
-  const mockUsers = {
-    'admin': 'ADMIN',
-    'usuario': 'USER',
-    'auditor': 'AUDITOR'
-  }
 
   const submitLogin = async () => {
     isLoading.value = true
     errorMessage.value = ''
 
     try {
-      // Validamos que el usuario exista en nuestro objeto y la contraseña sea correcta
-      const userRole = mockUsers[username.value.toLowerCase()]
+      const response = await api.post('/auth/login', {
+        username: username.value,
+        password: password.value,
+        role: role.value
+      })
 
-      if (userRole && password.value === 'Segura123!') {
-        // Guardamos el rol temporalmente en localStorage SOLO para pasarlo al 2FA
-        // (En la vida real, el backend manejaría este estado de sesión intermedia)
-        localStorage.setItem('pendingRole', userRole)
-        
-        // Pasamos al paso 2
+      if (response.data.msg === '2FA REQUIRED') {
+        localStorage.setItem('jwt', response.data.temp_token)
         router.push({ name: 'two-factor' })
       } else {
-        errorMessage.value = 'Credenciales incorrectas. Verifique su usuario o contraseña.'
+        const { access_token, roles, active_role } = response.data
+
+        // Store active_role as the main role for this session
+        authStore.login(access_token, active_role)
+
+        // Redirect based on the active role
+        if (active_role === 'ADMIN') router.push({ name: 'admin-dashboard' })
+        else if (active_role === 'AUDITOR') router.push({ name: 'auditor-dashboard' })
+        else router.push({ name: 'user-dashboard' })
       }
     } catch (error) {
-      errorMessage.value = 'Error de conexión con el servidor.'
+      if (error.response && error.response.data) {
+        errorMessage.value = error.response.data.msg || 'Credenciales o rol incorrectos.'
+      } else {
+        errorMessage.value = 'Error de conexión con el servidor.'
+      }
     } finally {
       isLoading.value = false
     }
   }
 
-  return { username, password, errorMessage, isLoading, submitLogin }
+  return { username, password, role, errorMessage, isLoading, submitLogin }
 }
