@@ -29,7 +29,7 @@ const router = createRouter({
       path: '/dashboard/user',
       name: 'user-dashboard',
       component: () => import('../views/dashboard/UserDashboard.vue'),
-      meta: { requiresAuth: true, roles: ['USER', 'ADMIN'] } 
+      meta: { requiresAuth: true, roles: ['USER', 'ADMIN'] }
     },
     {
       path: '/dashboard/admin',
@@ -53,27 +53,27 @@ const router = createRouter({
 })
 
 // Guardia de Navegación Global
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, from) => {
   const authStore = useAuthStore()
-  
+
   // 1. ¿La ruta requiere autenticación?
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     // Si no está autenticado, lo mandamos al login
-    return next({ name: 'login' })
+    return { name: 'login' }
   }
 
   // 2. ¿La ruta requiere un rol específico? (Autorización / RBAC)
   if (to.meta.roles && authStore.isAuthenticated) {
     const userRole = authStore.role
-    
+
     // Si el rol del usuario no está en la lista de roles permitidos para esta ruta
     if (!to.meta.roles.includes(userRole)) {
-      return next({ name: 'unauthorized' }) // Principio de mínimo privilegio aplicado
+      return { name: 'unauthorized' } // Principio de mínimo privilegio aplicado
     }
   }
 
-  // 3. Si pasa todas las validaciones, permitimos el acceso
-  next()
+  // 3. Si pasa todas las validaciones, permitimos el acceso (return true o nada)
+  return true
 })
 
 export default router

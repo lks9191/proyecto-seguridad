@@ -7,6 +7,8 @@ from utils.validators import validate_password
 from utils.totp import generate_totp_secret, verify_totp, get_totp_uri
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 import datetime
+import random
+from utils.mailer import send_otp_email
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -48,33 +50,56 @@ def login():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
+    requested_role = data.get('role')
 
     user = User.query.filter_by(username=username).first()
     
     ip_address = request.remote_addr
 
-    if user and user.check_password(password):
-        if user.is_2fa_enabled:
-            # Return a temporary token to proceed to 2FA verification
-            temp_token = create_access_token(identity=str(user.id), expires_delta=datetime.timedelta(minutes=5), additional_claims={"is_2fa_pending": True})
-            return jsonify(msg="2FA REQUIRED", temp_token=temp_token, is_2fa_enabled=True), 200
-        
-        # Successful login without 2FA
-        roles = [role.name for role in user.roles]
-        access_token = create_access_token(identity=str(user.id), additional_claims={"roles": roles})
-        
-        log = AuditLog(user_id=user.id, action='LOGIN_SUCCESS', ip_address=ip_address)
+    if not user or not user.check_password(password):
+        log = AuditLog(user_id=user.id if user else None, action='LOGIN_FAILED', ip_address=ip_address, details=f"Fallido para: {username}")
         db.session.add(log)
         db.session.commit()
-        
-        return jsonify(access_token=access_token, roles=roles), 200
+        return jsonify(msg="Credenciales incorrectas"), 401
 
-    # Failed login
-    log = AuditLog(user_id=user.id if user else None, action='LOGIN_FAILED', ip_address=ip_address, details=f"Failed attempt for username: {username}")
+    # Check if user has the requested role
+    user_roles = [role.name for role in user.roles]
+    if not user_roles:
+        return jsonify(msg="El usuario no tiene ningún rol asignado"), 403
+        
+    if requested_role and requested_role not in user_roles:
+        return jsonify(msg=f"Acceso denegado: El usuario no cuenta con el rol de {requested_role}"), 403
+
+    if user.is_2fa_enabled:
+        otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+        user.otp_code = otp
+        user.otp_expiry = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
+        db.session.commit()
+        
+        send_otp_email(user.email, otp)
+        
+        # Return a temporary token to proceed to 2FA verification
+        temp_token = create_access_token(
+            identity=str(user.id), 
+            expires_delta=datetime.timedelta(minutes=10), 
+            additional_claims={"is_2fa_pending": True, "selected_role": requested_role}
+        )
+        return jsonify(msg="2FA REQUIRED", temp_token=temp_token, is_2fa_enabled=True), 200
+    
+    # Successful login without 2FA
+    primary_role = requested_role if requested_role else user_roles[0]
+    access_token = create_access_token(identity=str(user.id), additional_claims={"roles": user_roles, "active_role": primary_role})
+    
+    # Create a session
+    from models.audit_log import Session
+    new_session = Session(user_id=user.id, ip_address=ip_address)
+    db.session.add(new_session)
+    
+    log = AuditLog(user_id=user.id, action='LOGIN_SUCCESS', ip_address=ip_address, details=f"Iniciado como {primary_role}")
     db.session.add(log)
     db.session.commit()
     
-    return jsonify(msg="Invalid username or password"), 401
+    return jsonify(access_token=access_token, roles=user_roles, active_role=primary_role), 200
 
 @auth_bp.route('/verify-2fa', methods=['POST'])
 @jwt_required()
@@ -90,15 +115,34 @@ def verify_2fa():
     if not user:
         return jsonify(msg="User not found"), 404
     
-    if verify_totp(user.totp_secret, token):
-        roles = [role.name for role in user.roles]
-        access_token = create_access_token(identity=str(user.id), additional_claims={"roles": roles})
+    # Check OTP from database instead of TOTP
+    if user.otp_code == token and user.otp_expiry > datetime.datetime.utcnow():
+        # Clear used OTP
+        user.otp_code = None
+        user.otp_expiry = None
+        db.session.commit()
+        # Extract selected role from incoming token claims if possible
+        import jwt
+        from flask import current_app
+        raw_token = request.headers.get('Authorization').split()[1]
+        decoded = jwt.decode(raw_token, current_app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
+        requested_role = decoded.get('selected_role')
+
+        user_roles = [role.name for role in user.roles]
+        primary_role = requested_role if requested_role and requested_role in user_roles else user_roles[0]
+
+        access_token = create_access_token(identity=str(user.id), additional_claims={"roles": user_roles, "active_role": primary_role})
         
-        log = AuditLog(user_id=user.id, action='LOGIN_SUCCESS_2FA', ip_address=request.remote_addr)
+        # Create a session
+        from models.audit_log import Session
+        new_session = Session(user_id=user.id, ip_address=request.remote_addr)
+        db.session.add(new_session)
+        
+        log = AuditLog(user_id=user.id, action='LOGIN_SUCCESS_2FA', ip_address=request.remote_addr, details=f"Iniciado como {primary_role}")
         db.session.add(log)
         db.session.commit()
         
-        return jsonify(access_token=access_token, roles=roles), 200
+        return jsonify(access_token=access_token, roles=user_roles, active_role=primary_role), 200
     
     log = AuditLog(user_id=user.id, action='LOGIN_FAILED_2FA', ip_address=request.remote_addr)
     db.session.add(log)

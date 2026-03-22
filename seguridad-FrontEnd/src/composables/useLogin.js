@@ -1,14 +1,16 @@
 // src/composables/useLogin.js
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-
+import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 
 export function useLogin() {
   const router = useRouter()
+  const authStore = useAuthStore()
 
   const username = ref('')
   const password = ref('')
+  const role = ref('USER') // Default role selected
   const errorMessage = ref('')
   const isLoading = ref(false)
 
@@ -19,27 +21,27 @@ export function useLogin() {
     try {
       const response = await api.post('/auth/login', {
         username: username.value,
-        password: password.value
+        password: password.value,
+        role: role.value
       })
 
       if (response.data.msg === '2FA REQUIRED') {
-        // Save the temporary token for 2FA verification
         localStorage.setItem('jwt', response.data.temp_token)
         router.push({ name: 'two-factor' })
       } else {
-        // Direct login (if 2FA was disabled, though our backend currently requires it if set)
-        const { access_token, roles } = response.data
-        localStorage.setItem('jwt', access_token)
-        localStorage.setItem('role', roles[0]) // Taking the first role for simplicity in the demo
+        const { access_token, roles, active_role } = response.data
 
-        // Redirect based on role
-        if (roles.includes('ADMIN')) router.push({ name: 'admin-dashboard' })
-        else if (roles.includes('AUDITOR')) router.push({ name: 'auditor-dashboard' })
+        // Store active_role as the main role for this session
+        authStore.login(access_token, active_role)
+
+        // Redirect based on the active role
+        if (active_role === 'ADMIN') router.push({ name: 'admin-dashboard' })
+        else if (active_role === 'AUDITOR') router.push({ name: 'auditor-dashboard' })
         else router.push({ name: 'user-dashboard' })
       }
     } catch (error) {
       if (error.response && error.response.data) {
-        errorMessage.value = error.response.data.msg || 'Credenciales incorrectas.'
+        errorMessage.value = error.response.data.msg || 'Credenciales o rol incorrectos.'
       } else {
         errorMessage.value = 'Error de conexión con el servidor.'
       }
@@ -48,5 +50,5 @@ export function useLogin() {
     }
   }
 
-  return { username, password, errorMessage, isLoading, submitLogin }
+  return { username, password, role, errorMessage, isLoading, submitLogin }
 }

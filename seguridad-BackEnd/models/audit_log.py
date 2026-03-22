@@ -14,3 +14,16 @@ class AuditLog(db.Model):
 
     def __repr__(self):
         return f'<AuditLog {self.action} by {self.user_id} at {self.timestamp}>'
+
+class Session(db.Model):
+    __tablename__ = 'sessions'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    ip_address = db.Column(db.String(45))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
+
+    user = db.relationship('User', backref=db.backref('sessions', lazy=True))
+
+    def __repr__(self):
+        return f'<Session {self.id} for user {self.user_id}>'

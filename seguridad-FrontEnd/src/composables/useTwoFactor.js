@@ -21,19 +21,19 @@ export function useTwoFactor() {
         token: totpCode.value
       })
 
-      const { access_token, roles } = response.data
+      const { access_token, active_role } = response.data
 
-      // Update store and local storage
-      authStore.login(access_token, roles[0])
+      // Update store and local storage with the active role
+      authStore.login(access_token, active_role)
 
-      // Redirect based on role
-      if (roles.includes('ADMIN')) router.push({ name: 'admin-dashboard' })
-      else if (roles.includes('AUDITOR')) router.push({ name: 'auditor-dashboard' })
+      // Redirect based on the active role
+      if (active_role === 'ADMIN') router.push({ name: 'admin-dashboard' })
+      else if (active_role === 'AUDITOR') router.push({ name: 'auditor-dashboard' })
       else router.push({ name: 'user-dashboard' })
 
     } catch (error) {
       if (error.response && error.response.data) {
-        errorMessage.value = error.response.data.msg || 'Código TOTP inválido.'
+        errorMessage.value = error.response.data.msg || 'Código de verificación inválido.'
       } else {
         errorMessage.value = 'Error al verificar el código.'
       }

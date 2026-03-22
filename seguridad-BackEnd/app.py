@@ -4,7 +4,7 @@ from flask_cors import CORS
 from config import Config
 from models.user import User
 from models.role import Role
-from models.audit_log import AuditLog
+from models.audit_log import AuditLog, Session
 
 def create_app(config_class=Config):
     app = Flask(__name__)
