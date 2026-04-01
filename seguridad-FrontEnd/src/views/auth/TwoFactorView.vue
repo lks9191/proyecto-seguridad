@@ -1,24 +1,53 @@
 <template>
-  <div class="login-wrapper">
-    <div class="glow-box">
-      <h2>Autenticación 2FA</h2>
-      <p class="subtitle">Hemos enviado un código a su correo electrónico institucional. Por favor, ingréselo a
-        continuación.</p>
-
-      <form @submit.prevent="verifyCode">
-        <div class="input-group">
-          <label for="totp">Código de 6 dígitos</label>
-          <input id="totp" v-model="totpCode" type="text" maxlength="6" required placeholder="123456" class="code-input"
-            autocomplete="off" />
+  <div class="gov-layout">
+    <header class="gov-header">
+      <div class="header-content">
+        <div class="logo-area">
+          <span class="shield-icon">🛡️</span>
+          <div class="titles">
+            <h1>SUT-BO</h1>
+            <p>Sistema Único de Trámites Bolivia</p>
+          </div>
         </div>
+      </div>
+    </header>
 
-        <p v-if="errorMessage" class="error-msg">{{ errorMessage }}</p>
+    <main class="login-wrapper">
+      <div class="auth-card">
+        <h2>Verificación de Seguridad (2FA)</h2>
+        <p class="auth-subtitle">
+          Hemos enviado un código temporal a su correo electrónico institucional. Por favor, ingréselo a continuación para continuar.
+        </p>
 
-        <button type="submit" :disabled="isLoading">
-          {{ isLoading ? 'VERIFICANDO...' : 'ACCEDER AL SISTEMA' }}
-        </button>
-      </form>
-    </div>
+        <form @submit.prevent="verifyCode">
+          <div class="input-group">
+            <label for="totp">Código de 6 dígitos</label>
+            <input 
+              id="totp" 
+              v-model="totpCode" 
+              type="text" 
+              maxlength="6" 
+              required 
+              placeholder="123456" 
+              class="gov-input code-input"
+              autocomplete="off" 
+            />
+          </div>
+
+          <div class="error-container">
+            <p v-if="errorMessage" class="error-msg">{{ errorMessage }}</p>
+          </div>
+
+          <button type="submit" :disabled="isLoading" class="gov-btn-primary">
+            {{ isLoading ? 'Verificando código...' : 'AUTENTICAR Y ACCEDER' }}
+          </button>
+        </form>
+      </div>
+    </main>
+
+    <footer class="gov-footer">
+      <p>© 2026 Plataforma de Identidad y Trámites Digitales - SUT-BO.</p>
+    </footer>
   </div>
 </template>
 
@@ -29,161 +58,205 @@ const { totpCode, errorMessage, isLoading, verifyCode } = useTwoFactor()
 </script>
 
 <style scoped>
-/* Contenedor principal que cubre toda la pantalla */
-.login-wrapper {
+/* Reset y fondo general */
+.gov-layout {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100vh;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  position: fixed;
+  flex-direction: column;
+  background-color: #f5f7fa;
+  margin: 0;
+  position: absolute;
   top: 0;
   left: 0;
   width: 100vw;
-  height: 100vh;
-  background-color: #0d0d0d;
-  padding: 1rem;
-  box-sizing: border-box;
-  z-index: 9999;
+  overflow-y: auto;
 }
 
-/* El contenedor con el resplandor azul */
-.glow-box {
-  background-color: #111111;
-  padding: 3rem 2.5rem;
-  border-radius: 20px;
-  width: 100%;
-  max-width: 380px;
-  box-shadow: 0 0 15px rgba(0, 150, 255, 0.4),
-    0 0 30px rgba(0, 150, 255, 0.2),
-    inset 0 0 10px rgba(0, 150, 255, 0.1);
-  border: 1px solid rgba(0, 150, 255, 0.3);
-  box-sizing: border-box;
-}
-
-h2 {
-  text-align: center;
+/* --- HEADER --- */
+.gov-header {
+  background-color: #2c3136;
   color: #ffffff;
-  margin-bottom: 0.5rem;
-  font-family: sans-serif;
-  font-size: 1.8rem;
-  font-weight: 600;
-  letter-spacing: 1px;
+  padding: 1.5rem 0;
+  border-bottom: 4px solid #0056b3;
 }
 
-/* Estilo para el texto explicativo */
-.subtitle {
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+}
+
+.logo-area {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.shield-icon {
+  font-size: 2.5rem;
+}
+
+.titles h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.titles p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #a0aab2;
+}
+
+/* --- CONTENEDOR CENTRAL --- */
+.login-wrapper {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 1rem;
+}
+
+/* --- TARJETA DE 2FA --- */
+.auth-card {
+  background-color: #ffffff;
+  padding: 2.5rem 3rem;
+  width: 100%;
+  max-width: 450px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-top: 4px solid #0056b3;
+}
+
+.auth-card h2 {
+  color: #2c3136;
+  margin: 0 0 0.5rem 0;
+  font-size: 1.4rem;
+  font-weight: 600;
   text-align: center;
-  color: #aaaaaa;
+}
+
+.auth-subtitle {
+  color: #666;
   font-size: 0.9rem;
   margin-bottom: 2rem;
-  line-height: 1.4;
-  font-family: sans-serif;
+  line-height: 1.5;
+  text-align: center;
 }
 
+/* --- FORMULARIOS --- */
 .input-group {
   display: flex;
   flex-direction: column;
-  margin-bottom: 1.8rem;
+  margin-bottom: 1.2rem;
 }
 
 label {
-  color: #cccccc;
+  color: #4a5568;
   font-size: 0.85rem;
+  font-weight: 600;
   margin-bottom: 0.5rem;
-  font-family: sans-serif;
   text-align: center;
-  /* Centrado para el 2FA */
 }
 
-/* Input específico para códigos */
-input.code-input {
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid #444;
-  color: #ffffff;
-  font-size: 1.5rem;
-  /* Más grande para números */
-  padding: 0.5rem 0;
+.gov-input {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e0;
+  color: #2d3748;
+  font-size: 1rem;
+  padding: 0.75rem;
   outline: none;
-  transition: border-bottom-color 0.3s;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: inherit;
+}
+
+.gov-input:focus {
+  border-color: #0056b3;
+  box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
+}
+
+/* Input específico para códigos 2FA */
+.code-input {
   text-align: center;
-  /* Números al centro */
-  letter-spacing: 5px;
-  /* Separación entre números */
+  font-size: 1.8rem;
+  letter-spacing: 8px;
+  font-weight: 600;
+  padding: 1rem 0;
+  color: #2c3136;
 }
 
-input.code-input:focus {
-  border-bottom-color: #0096ff;
+.code-input::placeholder {
+  color: #cbd5e0;
+  letter-spacing: 8px;
 }
 
-/* Ocultar el placeholder cuando hace foco para que no se vea raro con el letter-spacing */
-input.code-input:focus::placeholder {
+.code-input:focus::placeholder {
   color: transparent;
 }
 
-.error-msg {
-  color: #ff4d4d;
-  font-size: 0.85rem;
-  text-align: center;
-  margin-bottom: 1rem;
+/* --- MENSAJES DE ERROR --- */
+.error-container {
+  min-height: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
 }
 
-/* Botón estilo píldora con resplandor */
-button {
-  background-color: #0096ff;
+.error-msg {
+  color: #c53030;
+  font-size: 0.85rem;
+  background: #fff5f5;
+  padding: 0.75rem;
+  border-left: 4px solid #c53030;
+  margin: 0;
+  text-align: center;
+}
+
+/* --- BOTONES --- */
+.gov-btn-primary {
+  background-color: #0056b3;
   color: #ffffff;
   border: none;
-  border-radius: 30px;
-  padding: 0.9rem;
+  padding: 1rem;
   font-size: 1rem;
-  font-weight: bold;
-  letter-spacing: 2px;
+  font-weight: 600;
   cursor: pointer;
   width: 100%;
-  margin-top: 1rem;
-  box-shadow: 0 0 15px rgba(0, 150, 255, 0.5);
-  transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+  transition: background-color 0.2s;
+  border-radius: 4px;
 }
 
-button:hover:not(:disabled) {
-  background-color: #1aa3ff;
-  box-shadow: 0 0 25px rgba(0, 150, 255, 0.8);
-  transform: translateY(-2px);
+.gov-btn-primary:hover:not(:disabled) {
+  background-color: #004494;
 }
 
-button:disabled {
-  background-color: #333333;
-  color: #777777;
-  box-shadow: none;
+.gov-btn-primary:disabled {
+  background-color: #a0aec0;
   cursor: not-allowed;
 }
 
-/* --- Ajustes Responsivos para Celulares --- */
+/* --- FOOTER --- */
+.gov-footer {
+  background-color: #2c3136;
+  color: #a0aab2;
+  text-align: center;
+  padding: 1.5rem;
+  font-size: 0.85rem;
+}
+
+/* --- RESPONSIVE --- */
 @media (max-width: 480px) {
-  .glow-box {
+  .auth-card {
     padding: 2rem 1.5rem;
-    border-radius: 15px;
   }
-
-  h2 {
+  .titles h1 {
+    font-size: 1.2rem;
+  }
+  .code-input {
     font-size: 1.5rem;
-  }
-
-  .subtitle {
-    font-size: 0.85rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .input-group {
-    margin-bottom: 1.5rem;
-  }
-
-  input.code-input {
-    font-size: 1.3rem;
-  }
-
-  button {
-    padding: 0.8rem;
-    font-size: 0.95rem;
+    letter-spacing: 6px;
   }
 }
 </style>

@@ -1,46 +1,63 @@
 <template>
-  <div class="dashboard-wrapper">
-    <div class="auditor-dashboard glow-box">
-      <header class="dashboard-header">
-        <div class="header-left">
-          <h2>Panel de Auditoría</h2>
-          <div v-if="profile" class="user-info-mini">
+  <div class="gov-layout">
+    <header class="gov-header">
+      <div class="header-content">
+        <div class="logo-area">
+          <span class="shield-icon">🛡️</span>
+          <div class="titles">
+            <h1>SUT-BO</h1>
+            <p>Sistema Único de Trámites Bolivia</p>
+          </div>
+        </div>
+        
+        <div class="header-actions">
+          <div v-if="profile" class="admin-profile-badge">
             <span class="username">{{ profile.username }}</span>
             <span :class="['status-dot', profile.is_2fa_enabled ? 'active' : 'inactive']"
               :title="profile.is_2fa_enabled ? '2FA Activo' : '2FA Inactivo'"></span>
-            <button @click="openTwoFAModal" class="mini-2fa-btn">{{ profile.is_2fa_enabled ? '2FA OK' : 'ACTIVAR 2FA'
-              }}</button>
+            <button @click="openTwoFAModal" class="mini-2fa-btn">
+              {{ profile.is_2fa_enabled ? '2FA OK' : 'Activar 2FA' }}
+            </button>
           </div>
+          
+          <button @click="refresh" class="gov-btn-outline-light">Refrescar</button>
+          <button @click="handleLogout" class="gov-logout-btn">Cerrar Sesión</button>
         </div>
-        <div class="header-actions">
-          <button @click="refresh" class="refresh-btn">REFRESCAR</button>
-          <button @click="handleLogout" class="logout-btn">CERRAR SESIÓN</button>
-        </div>
-      </header>
+      </div>
+    </header>
+
+    <main class="dashboard-main">
+      <div class="dashboard-header-bar">
+        <h2>Panel de Auditoría y Transparencia</h2>
+        <p class="subtitle">Monitoreo de Solo Lectura para garantizar la Integridad del sistema.</p>
+      </div>
 
       <div v-if="message" class="alert-info" @click="message = ''">
         {{ message }}
       </div>
 
-      <div v-if="isLoading" class="loading">Cargando logs de auditoría...</div>
+      <div v-if="isLoading" class="loading">Cargando registros de auditoría...</div>
 
       <div v-else class="tab-content">
-        <div class="section">
-          <h3>Sesiones Activas Actualmente</h3>
-          <p class="subtitle">Monitoreo en tiempo real de accesos al sistema.</p>
+        <div class="gov-card mb-2">
+          <div class="section-header">
+            <h3>Sesiones Activas Actualmente</h3>
+            <p class="section-subtitle">Monitoreo en tiempo real de accesos a la plataforma.</p>
+          </div>
+          
           <div class="table-responsive">
             <table>
               <thead>
                 <tr>
                   <th>Usuario</th>
                   <th>Dirección IP</th>
-                  <th>Fecha de Inicio</th>
+                  <th>Fecha y Hora de Inicio</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="session in activeSessions" :key="session.id">
-                  <td>{{ session.username }}</td>
-                  <td><code class="ip-text">{{ session.ip_address }}</code></td>
+                  <td class="fw-bold">{{ session.username }}</td>
+                  <td class="mono-text">{{ session.ip_address }}</td>
                   <td>{{ formatDate(session.created_at) }}</td>
                 </tr>
               </tbody>
@@ -48,28 +65,31 @@
           </div>
         </div>
 
-        <div class="section mt-4">
-          <h3>Historial de Accesos y Eventos</h3>
-          <p class="subtitle">Registro histórico para fines de auditoría legal.</p>
+        <div class="gov-card">
+          <div class="section-header">
+            <h3>Historial de Accesos y Eventos</h3>
+            <p class="section-subtitle">Registro histórico inmutable para fines de auditoría legal.</p>
+          </div>
+          
           <div class="table-responsive">
             <table>
               <thead>
                 <tr>
-                  <th>Usuario</th>
+                  <th>Identificación (Usuario)</th>
                   <th>Acción Realizada</th>
                   <th>Dirección IP</th>
-                  <th>Fecha y Hora</th>
+                  <th>Fecha y Hora del Evento</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="log in sessionHistory" :key="log.id">
-                  <td>{{ log.username }}</td>
+                  <td class="fw-bold">{{ log.username }}</td>
                   <td>
                     <span :class="['event-badge', getEventClass(log.action)]">
                       {{ log.action }}
                     </span>
                   </td>
-                  <td><code class="ip-text">{{ log.ip_address }}</code></td>
+                  <td class="mono-text">{{ log.ip_address }}</td>
                   <td>{{ formatDate(log.timestamp) }}</td>
                 </tr>
               </tbody>
@@ -77,34 +97,41 @@
           </div>
         </div>
       </div>
-    </div>
+    </main>
 
-    <!-- 2FA SETUP MODAL (AUDITOR PERSO) -->
-    <div v-if="showTwoFAModal" class="modal-overlay">
-      <div class="modal-content glow-box">
-        <h3>Seguridad: 2FA vía Email</h3>
+    <footer class="gov-footer">
+      <p>© 2026 Plataforma de Identidad y Trámites Digitales - SUT-BO.</p>
+    </footer>
+
+    <div v-if="showTwoFAModal" class="gov-modal-overlay">
+      <div class="gov-modal-content">
+        <h3>Seguridad de la Cuenta (2FA)</h3>
+        
         <div v-if="twoFAStep === 'request'">
-          <p v-if="!profile?.is_2fa_enabled">Protege tu acceso de auditor. Enviaremos un código a <strong>{{
-            profile?.email }}</strong>.</p>
-          <p v-else>El segundo factor está activo manejando la integridad de tu cuenta.</p>
+          <p class="modal-subtitle" v-if="!profile?.is_2fa_enabled">
+            Para garantizar la transparencia de sus auditorías, asegure su cuenta. Enviaremos un código a: <strong>{{ profile?.email }}</strong>
+          </p>
+          <p class="modal-subtitle" v-else>
+            El segundo factor está activo protegiendo la integridad de su cuenta de Auditor.
+          </p>
           <div class="modal-actions">
-            <button @click="showTwoFAModal = false" class="cancel-btn">CANCELAR</button>
-            <button v-if="!profile?.is_2fa_enabled" @click="handleRequestOTP" class="submit-btn"
-              :disabled="isVerifying">
-              {{ isVerifying ? 'ENVIANDO...' : 'ENVIAR CÓDIGO' }}
+            <button @click="showTwoFAModal = false" class="gov-btn-secondary">Cancelar</button>
+            <button v-if="!profile?.is_2fa_enabled" @click="handleRequestOTP" class="gov-btn-primary" :disabled="isVerifying">
+              {{ isVerifying ? 'Enviando...' : 'Enviar Código' }}
             </button>
-            <button v-else @click="handleDisable2FA" class="logout-btn">DESACTIVAR 2FA</button>
+            <button v-else @click="handleDisable2FA" class="gov-btn-danger">Desactivar 2FA</button>
           </div>
         </div>
+        
         <div v-else>
-          <p>Ingresa el código de 6 dígitos enviado a tu correo.</p>
+          <p class="modal-subtitle">Ingrese el código de 6 dígitos enviado a su correo institucional.</p>
           <div class="input-group">
-            <input v-model="otpToken" class="neon-input code-input" placeholder="000000" maxlength="6">
+            <input v-model="otpToken" class="gov-input code-input" placeholder="000000" maxlength="6">
           </div>
           <div class="modal-actions">
-            <button @click="twoFAStep = 'request'" class="cancel-btn">VOLVER</button>
-            <button @click="handleConfirm2FA" class="submit-btn" :disabled="isVerifying || otpToken.length < 6">
-              {{ isVerifying ? 'VERIFICANDO...' : 'CONFIRMAR' }}
+            <button @click="twoFAStep = 'request'" class="gov-btn-secondary">Volver</button>
+            <button @click="handleConfirm2FA" class="gov-btn-primary" :disabled="isVerifying || otpToken.length < 6">
+              {{ isVerifying ? 'Verificando...' : 'Confirmar y Activar' }}
             </button>
           </div>
         </div>
@@ -154,7 +181,7 @@ const handleConfirm2FA = async () => {
 }
 
 const handleDisable2FA = async () => {
-  if (confirm('¿Desactivar 2FA?')) {
+  if (confirm('Atención: Desactivar el 2FA disminuye la seguridad de sus accesos. ¿Desea continuar?')) {
     await disable2FA()
     showTwoFAModal.value = false
   }
@@ -168,271 +195,176 @@ const formatDate = (dateStr) => {
 
 const getEventClass = (event) => {
   if (event.includes('SUCCESS')) return 'success'
-  if (event.includes('FAILED')) return 'danger'
+  if (event.includes('FAILED') || event.includes('UNAUTHORIZED')) return 'danger'
   if (event.includes('LOGOUT')) return 'warning'
   return 'default'
 }
 </script>
 
 <style scoped>
-.dashboard-wrapper {
+/* Reset y layout principal */
+.gov-layout {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f5f7fa;
+  margin: 0;
   position: absolute;
   top: 0;
   left: 0;
   width: 100vw;
-  min-height: 100vh;
-  background-color: #0d0d0d;
-  padding: 2rem 1rem;
-  box-sizing: border-box;
-  font-family: sans-serif;
-  color: #ffffff;
   overflow-y: auto;
 }
 
-.glow-box {
-  background-color: #111111;
-  padding: 2.5rem;
-  border-radius: 20px;
-  max-width: 1000px;
-  margin: 0 auto;
-  box-shadow: 0 0 15px rgba(0, 150, 255, 0.2);
-  border: 1px solid rgba(0, 150, 255, 0.2);
+/* --- HEADER --- */
+.gov-header {
+  background-color: #2c3136;
+  color: #ffffff;
+  padding: 1rem 0;
+  border-bottom: 4px solid #0056b3;
 }
 
-.dashboard-header {
+.header-content {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 0 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #333;
-  padding-bottom: 1rem;
-  margin-bottom: 2rem;
 }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-}
+.logo-area { display: flex; align-items: center; gap: 1rem; }
+.shield-icon { font-size: 2rem; }
+.titles h1 { margin: 0; font-size: 1.2rem; font-weight: 600; letter-spacing: 0.5px; }
+.titles p { margin: 0; font-size: 0.8rem; color: #a0aab2; }
 
-.user-info-mini {
+/* Header Actions y Mini Perfil */
+.header-actions { display: flex; align-items: center; gap: 1.5rem; }
+
+.admin-profile-badge {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
-  background: #1a1a1a;
-  padding: 5px 15px;
+  gap: 0.6rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.4rem 1rem;
   border-radius: 20px;
-  border: 1px solid #333;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ff4d4d;
-}
-
-.status-dot.active {
-  background: #28a745;
-  box-shadow: 0 0 5px #28a745;
-}
+.username { font-weight: 600; font-size: 0.9rem; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #fca5a5; }
+.status-dot.active { background: #86efac; }
 
 .mini-2fa-btn {
   background: transparent;
   border: none;
-  color: #0096ff;
-  font-size: 0.7rem;
-  font-weight: bold;
+  color: #93c5fd;
+  font-size: 0.75rem;
+  font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
+  padding: 0;
 }
+.mini-2fa-btn:hover { color: #ffffff; }
 
-h2 {
-  color: #0096ff;
-  margin: 0;
-}
-
-.logout-btn {
+.gov-btn-outline-light {
   background: transparent;
-  color: #ff4d4d;
-  border: 1px solid #ff4d4d;
-  border-radius: 30px;
-  padding: 0.5rem 1.2rem;
-  cursor: pointer;
-  font-weight: bold;
-  transition: all 0.3s;
-}
-
-.logout-btn:hover {
-  background: #ff4d4d;
-  color: white;
-}
-
-.refresh-btn {
-  background: transparent;
-  color: #0096ff;
-  border: 1px solid #0096ff;
-  border-radius: 30px;
-  padding: 0.5rem 1.2rem;
-  cursor: pointer;
-  font-weight: bold;
-  transition: all 0.3s;
-  margin-right: 1rem;
-}
-
-.refresh-btn:hover {
-  background: #0096ff;
-  color: white;
-}
-
-.section {
-  background: #1a1a1a;
-  padding: 1.5rem;
-  border-radius: 12px;
-  border: 1px solid #333;
-  margin-bottom: 2rem;
-}
-
-h3 {
-  margin-bottom: 0.2rem;
-}
-
-.subtitle {
-  color: #888;
-  font-size: 0.85rem;
-  margin-bottom: 1.5rem;
-}
-
-.table-responsive {
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #333;
-}
-
-th {
-  color: #0096ff;
-  font-weight: bold;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-}
-
-.ip-text {
-  background: #000;
-  color: #00ff00;
-  padding: 2px 6px;
+  color: #ffffff;
+  border: 1px solid #cbd5e0;
+  padding: 0.4rem 1rem;
   border-radius: 4px;
-  font-family: monospace;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.gov-btn-outline-light:hover { background: rgba(255,255,255,0.1); }
+
+.gov-logout-btn {
+  background-color: transparent;
+  color: #ffcccb;
+  border: 1px solid #c53030;
+  padding: 0.4rem 1rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.gov-logout-btn:hover { background-color: #c53030; color: white; }
+
+/* --- CONTENIDO PRINCIPAL --- */
+.dashboard-main {
+  flex-grow: 1;
+  max-width: 1300px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 2rem;
+  box-sizing: border-box;
 }
 
-.event-badge {
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 0.8rem;
-  font-weight: bold;
-}
+.dashboard-header-bar { margin-bottom: 2rem; }
+.dashboard-header-bar h2 { margin: 0 0 0.3rem 0; color: #2c3136; font-size: 1.8rem; }
+.subtitle { color: #4a5568; margin: 0; font-size: 1rem; }
 
-.success {
-  color: #28a745;
-  border: 1px solid #28a745;
-}
-
-.danger {
-  color: #ff4d4d;
-  border: 1px solid #ff4d4d;
-}
-
-.warning {
-  color: #ffa500;
-  border: 1px solid #ffa500;
-}
-
-.loading {
-  text-align: center;
-  color: #0096ff;
+/* Tarjetas (Secciones) */
+.gov-card {
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border-top: 4px solid #0056b3;
   padding: 2rem;
 }
 
-.alert-info {
-  background: rgba(0, 150, 255, 0.1);
-  color: #0096ff;
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  border-left: 4px solid #0096ff;
-  cursor: pointer;
-}
+.mb-2 { margin-bottom: 2rem; }
 
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
+.section-header { margin-bottom: 1.5rem; }
+h3 { margin: 0 0 0.3rem 0; color: #2c3136; font-size: 1.3rem; font-weight: 600; }
+.section-subtitle { margin: 0; color: #718096; font-size: 0.9rem; }
 
-.modal-content {
-  width: 90%;
-  max-width: 450px;
-}
+/* --- TABLAS --- */
+.table-responsive { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; }
+th, td { border-bottom: 1px solid #e2e8f0; padding: 12px 15px; text-align: left; font-size: 0.9rem; color: #4a5568; }
+th { background-color: #edf2f7; color: #2c3136; font-weight: 600; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; }
+tr:hover { background-color: #f8fafc; }
+.fw-bold { font-weight: 600; color: #2c3136; }
+.mono-text { font-family: 'Courier New', Courier, monospace; color: #718096; font-size: 0.95em; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0; }
 
-.input-group {
-  margin-bottom: 1.2rem;
-  display: flex;
-  flex-direction: column;
-}
+/* Badges de Eventos */
+.event-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; display: inline-block; }
+.success { background-color: #def7ec; color: #03543f; border: 1px solid #84e1bc; }
+.danger { background-color: #fde8e8; color: #9b1c1c; border: 1px solid #f8b4b4; }
+.warning { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.default { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e0; }
 
-.neon-input {
-  background: #0d0d0d;
-  color: white;
-  border: 1px solid #444;
-  padding: 0.6rem;
-  border-radius: 4px;
-  outline: none;
-}
+/* --- MODALES --- */
+.gov-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(44, 49, 54, 0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(2px); }
+.gov-modal-content { background: #ffffff; width: 90%; max-width: 500px; padding: 2.5rem; border-radius: 8px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); border-top: 4px solid #0056b3; }
+.gov-modal-content h3 { margin-top: 0; color: #2c3136; font-size: 1.4rem; margin-bottom: 0.5rem; }
+.modal-subtitle { color: #666; font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.4; }
+.input-group { margin-bottom: 1.2rem; display: flex; flex-direction: column; }
+.gov-input { background: #ffffff; color: #2d3748; border: 1px solid #cbd5e0; padding: 0.75rem; border-radius: 4px; outline: none; font-family: inherit; font-size: 0.95rem; }
+.gov-input:focus { border-color: #0056b3; box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1); }
+.code-input { text-align: center; font-size: 1.5rem; letter-spacing: 8px; font-weight: bold; }
 
-.code-input {
-  text-align: center;
-  font-size: 1.5rem;
-  letter-spacing: 10px;
-}
+.modal-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1.5rem; }
+.gov-btn-secondary { background: #edf2f7; color: #4a5568; border: 1px solid #cbd5e0; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
+.gov-btn-secondary:hover { background: #e2e8f0; }
+.gov-btn-primary { background: #0056b3; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
+.gov-btn-primary:hover:not(:disabled) { background: #004494; }
+.gov-btn-primary:disabled { background: #a0aec0; cursor: not-allowed; }
+.gov-btn-danger { background: #c53030; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
 
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 2rem;
-}
+.alert-info { background: #e6f7ff; color: #0056b3; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem; cursor: pointer; border-left: 4px solid #0056b3; font-weight: 500; }
+.loading { text-align: center; color: #0056b3; padding: 2rem; font-weight: 600; }
 
-.cancel-btn {
-  background: #333;
-  color: white;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 4px;
-  cursor: pointer;
-}
+/* --- FOOTER --- */
+.gov-footer { background-color: #2c3136; color: #a0aab2; text-align: center; padding: 1.5rem; font-size: 0.85rem; }
 
-.submit-btn {
-  background: #0096ff;
-  color: white;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
+@media (max-width: 768px) {
+  .header-content { flex-direction: column; gap: 1rem; text-align: center; }
+  .header-actions { flex-direction: column; width: 100%; }
+  .dashboard-main { padding: 1rem; }
 }
 </style>

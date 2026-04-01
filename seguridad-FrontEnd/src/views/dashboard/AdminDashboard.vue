@@ -1,219 +1,240 @@
 <template>
-  <div class="dashboard-wrapper">
-    <div class="admin-dashboard glow-box">
-      <header class="dashboard-header">
-        <div class="header-left">
-          <h2>Panel de Administración (RBAC)</h2>
-          <div v-if="profile" class="user-info-mini">
+  <div class="gov-layout">
+    <header class="gov-header">
+      <div class="header-content">
+        <div class="logo-area">
+          <span class="shield-icon">🛡️</span>
+          <div class="titles">
+            <h1>SUT-BO</h1>
+            <p>Sistema Único de Trámites Bolivia</p>
+          </div>
+        </div>
+        
+        <div class="header-actions">
+          <div v-if="profile" class="admin-profile-badge">
             <span class="username">{{ profile.username }}</span>
             <span :class="['status-dot', profile.is_2fa_enabled ? 'active' : 'inactive']"
               :title="profile.is_2fa_enabled ? '2FA Activo' : '2FA Inactivo'"></span>
-            <button @click="openTwoFAModal" class="mini-2fa-btn">{{ profile.is_2fa_enabled ? '2FA OK' : 'ACTIVAR 2FA'
-              }}</button>
+            <button @click="openTwoFAModal" class="mini-2fa-btn">
+              {{ profile.is_2fa_enabled ? '2FA OK' : 'Activar 2FA' }}
+            </button>
           </div>
+          
+          <button @click="refresh" class="gov-btn-outline-light">Refrescar</button>
+          <button @click="handleLogout" class="gov-logout-btn">Cerrar Sesión</button>
         </div>
-        <div class="header-actions">
-          <button @click="refresh" class="refresh-btn">REFRESCAR</button>
-          <button @click="handleLogout" class="logout-btn">CERRAR SESIÓN</button>
-        </div>
-      </header>
+      </div>
+    </header>
+
+    <main class="dashboard-main">
+      <div class="dashboard-header-bar">
+        <h2>Panel de Administración (RBAC)</h2>
+        <p class="subtitle">Gestión centralizada de identidades, roles y auditoría de sesiones.</p>
+      </div>
 
       <div v-if="message" class="alert-info" @click="message = ''">
         {{ message }}
       </div>
 
-      <!-- TABS -->
-      <div class="tabs">
-        <button :class="{ active: activeTab === 'users' }" @click="activeTab = 'users'">USUARIOS</button>
-        <button :class="{ active: activeTab === 'roles' }" @click="activeTab = 'roles'">ROLES</button>
-        <button :class="{ active: activeTab === 'sessions' }" @click="activeTab = 'sessions'">SESIONES</button>
-      </div>
-
-      <div v-if="isLoading" class="loading">Cargando datos...</div>
-
-      <div v-else class="tab-content">
-        <!-- USER CRUD -->
-        <div v-if="activeTab === 'users'" class="section">
-          <div class="section-header">
-            <h3>Gestión de Usuarios</h3>
-            <button @click="openCreateModal" class="add-btn">+ NUEVO USUARIO</button>
-          </div>
-          <div class="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Usuario</th>
-                  <th>Email</th>
-                  <th>Roles</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="user in users" :key="user.id">
-                  <td>{{ user.id }}</td>
-                  <td>{{ user.username }}</td>
-                  <td>{{ user.email }}</td>
-                  <td>
-                    <span v-for="r in user.roles" :key="r" :class="['role-badge', r.toLowerCase()]">
-                      {{ r }}
-                    </span>
-                  </td>
-                  <td>
-                    <button @click="openEditModal(user)" class="edit-btn-small">EDITAR</button>
-                    <button @click="deleteUser(user.id)" class="delete-icon">🗑️</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+      <div class="gov-card">
+        <div class="gov-tabs">
+          <button :class="{ active: activeTab === 'users' }" @click="activeTab = 'users'">USUARIOS</button>
+          <button :class="{ active: activeTab === 'roles' }" @click="activeTab = 'roles'">ROLES</button>
+          <button :class="{ active: activeTab === 'sessions' }" @click="activeTab = 'sessions'">SESIONES ACTIVAS</button>
         </div>
 
-        <!-- ROLE CRUD -->
-        <div v-if="activeTab === 'roles'" class="section">
-          <div class="section-header">
-            <h3>Gestión de Roles</h3>
-            <div class="add-role-form">
-              <input v-model="newRoleName" placeholder="Nombre del rol" class="neon-input">
-              <button @click="handleCreateRole" class="add-btn">AGREGAR</button>
+        <div v-if="isLoading" class="loading">Cargando información del sistema...</div>
+
+        <div v-else class="tab-content">
+          <div v-if="activeTab === 'users'" class="section">
+            <div class="section-header">
+              <h3>Directorio de Usuarios</h3>
+              <button @click="openCreateModal" class="gov-btn-primary">+ Nuevo Funcionario / Ciudadano</button>
+            </div>
+            
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Usuario / Documento</th>
+                    <th>Correo Electrónico</th>
+                    <th>Roles Asignados</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="user in users" :key="user.id">
+                    <td class="fw-bold">{{ user.id }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                      <span v-for="r in user.roles" :key="r" :class="['role-badge', r.toLowerCase()]">
+                        {{ r }}
+                      </span>
+                    </td>
+                    <td>
+                      <button @click="openEditModal(user)" class="gov-btn-outline-small">Editar</button>
+                      <button @click="deleteUser(user.id)" class="gov-btn-danger-icon" title="Eliminar Usuario">🗑️</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
-          <div class="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Nombre del Rol</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="role in roles" :key="role.id">
-                  <td>{{ role.id }}</td>
-                  <td><span class="role-badge">{{ role.name }}</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
 
-        <!-- SESSIONS -->
-        <div v-if="activeTab === 'sessions'" class="section">
-          <h3>Sesiones Activas</h3>
-          <div class="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>Usuario</th>
-                  <th>IP</th>
-                  <th>Iniciada</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="s in activeSessions" :key="s.id">
-                  <td>{{ s.username }}</td>
-                  <td>{{ s.ip_address }}</td>
-                  <td>{{ formatDate(s.created_at) }}</td>
-                </tr>
-              </tbody>
-            </table>
+          <div v-if="activeTab === 'roles'" class="section">
+            <div class="section-header">
+              <h3>Gestión de Privilegios (Roles)</h3>
+              <div class="add-role-form">
+                <input v-model="newRoleName" placeholder="Ej: SUPERVISOR" class="gov-input input-inline">
+                <button @click="handleCreateRole" class="gov-btn-primary">Añadir Rol</button>
+              </div>
+            </div>
+            
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 80px;">ID</th>
+                    <th>Identificador del Rol</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="role in roles" :key="role.id">
+                    <td class="fw-bold">{{ role.id }}</td>
+                    <td><span class="role-badge default-role">{{ role.name }}</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <h3 class="mt-2">Historial de Sesiones</h3>
-          <div class="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>Usuario</th>
-                  <th>Acción</th>
-                  <th>IP</th>
-                  <th>Fecha</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="h in sessionHistory" :key="h.id">
-                  <td>{{ h.username }}</td>
-                  <td>
-                    <span :class="['event-badge', getEventClass(h.action)]">{{ h.action }}</span>
-                  </td>
-                  <td>{{ h.ip_address }}</td>
-                  <td>{{ formatDate(h.timestamp) }}</td>
-                </tr>
-              </tbody>
-            </table>
+          <div v-if="activeTab === 'sessions'" class="section">
+            <h3>Sesiones Activas en Tiempo Real</h3>
+            <div class="table-responsive mb-2">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Usuario conectado</th>
+                    <th>Dirección IP</th>
+                    <th>Hora de Inicio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="s in activeSessions" :key="s.id">
+                    <td class="fw-bold">{{ s.username }}</td>
+                    <td class="mono-text">{{ s.ip_address }}</td>
+                    <td>{{ formatDate(s.created_at) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3 class="mt-2">Registro Histórico (Auditoría Básica)</h3>
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Evento Registrado</th>
+                    <th>Dirección IP</th>
+                    <th>Fecha y Hora</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="h in sessionHistory" :key="h.id">
+                    <td class="fw-bold">{{ h.username }}</td>
+                    <td>
+                      <span :class="['event-badge', getEventClass(h.action)]">{{ h.action }}</span>
+                    </td>
+                    <td class="mono-text">{{ h.ip_address }}</td>
+                    <td>{{ formatDate(h.timestamp) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </main>
 
-    <!-- MODAL PARA USUARIO (CREAR/EDITAR) -->
-    <div v-if="showUserModal" class="modal-overlay">
-      <div class="modal-content glow-box">
-        <h3>{{ isEditing ? 'Editar Usuario' : 'Crear Nuevo Usuario' }}</h3>
+    <footer class="gov-footer">
+      <p>© 2026 Plataforma de Identidad y Trámites Digitales - SUT-BO.</p>
+    </footer>
+
+    <div v-if="showUserModal" class="gov-modal-overlay">
+      <div class="gov-modal-content">
+        <h3>{{ isEditing ? 'Actualizar Credenciales' : 'Registrar Nuevo Usuario' }}</h3>
+        <p class="modal-subtitle">Complete el formulario para asignar accesos en el sistema.</p>
+        
         <div v-if="modalError" class="modal-alert-error" @click="modalError = ''">
           {{ modalError }}
         </div>
+        
         <form @submit.prevent="handleSubmitUser">
           <div class="input-group">
-            <label>Username</label>
-            <input v-model="userForm.username" required class="neon-input">
+            <label>Identificación (Usuario / Documento)</label>
+            <input v-model="userForm.username" required class="gov-input">
           </div>
           <div class="input-group">
-            <label>Email</label>
-            <input v-model="userForm.email" type="email" required class="neon-input">
+            <label>Correo Electrónico Institucional/Personal</label>
+            <input v-model="userForm.email" type="email" required class="gov-input">
           </div>
           <div class="input-group">
-            <label>{{ isEditing ? 'Nueva Contraseña (Opcional)' : 'Password (Fuerte)' }}</label>
-            <input v-model="userForm.password" type="password" :required="!isEditing" class="neon-input">
+            <label>{{ isEditing ? 'Nueva Contraseña (Opcional)' : 'Contraseña Segura' }}</label>
+            <input v-model="userForm.password" type="password" :required="!isEditing" class="gov-input">
           </div>
           <div class="input-group" v-if="!isEditing || userForm.password">
-            <label>Confirmar Password</label>
-            <input v-model="userForm.confirmPassword" type="password" required class="neon-input">
+            <label>Confirmar Contraseña</label>
+            <input v-model="userForm.confirmPassword" type="password" required class="gov-input">
           </div>
           <div class="input-group">
-            <label>Roles</label>
+            <label>Privilegios (Roles RBAC)</label>
             <div class="roles-checklist">
               <label v-for="r in roles" :key="r.id" class="checkbox-label">
-                <input type="checkbox" :value="r.name" v-model="userForm.roles">
-                {{ r.name }}
+                <input type="checkbox" :value="r.name" v-model="userForm.roles" class="gov-checkbox">
+                <span>{{ r.name }}</span>
               </label>
             </div>
           </div>
           <div class="modal-actions">
-            <button type="button" @click="showUserModal = false" class="cancel-btn">CANCELAR</button>
-            <button type="submit" class="submit-btn" :disabled="isSubmitting">
-              {{ isSubmitting ? 'GUARDANDO...' : (isEditing ? 'ACTUALIZAR' : 'CREAR') }}
+            <button type="button" @click="showUserModal = false" class="gov-btn-secondary">Cancelar</button>
+            <button type="submit" class="gov-btn-primary" :disabled="isSubmitting">
+              {{ isSubmitting ? 'Procesando...' : (isEditing ? 'Actualizar Registro' : 'Crear Usuario') }}
             </button>
           </div>
         </form>
       </div>
     </div>
 
-    <!-- 2FA SETUP MODAL (ADMIN PERSO) -->
-    <div v-if="showTwoFAModal" class="modal-overlay">
-      <div class="modal-content glow-box">
-        <h3>Seguridad: 2FA vía Email</h3>
+    <div v-if="showTwoFAModal" class="gov-modal-overlay">
+      <div class="gov-modal-content">
+        <h3>Seguridad de la Cuenta (2FA)</h3>
         <div v-if="twoFAStep === 'request'">
-          <p v-if="!profile?.is_2fa_enabled">Activa el segundo factor para mayor seguridad. Enviaremos un código a
-            <strong>{{ profile?.email }}</strong>.</p>
-          <p v-else>El segundo factor está actualmente activo. ¿Deseas desactivarlo?</p>
+          <p class="modal-subtitle" v-if="!profile?.is_2fa_enabled">
+            Como administrador, es obligatorio asegurar su cuenta. Enviaremos un código a: <strong>{{ profile?.email }}</strong>
+          </p>
+          <p class="modal-subtitle" v-else>
+            El segundo factor está actualmente activo protegiendo su cuenta. ¿Desea desactivarlo bajo su propio riesgo?
+          </p>
           <div class="modal-actions">
-            <button @click="showTwoFAModal = false" class="cancel-btn">CANCELAR</button>
-            <button v-if="!profile?.is_2fa_enabled" @click="handleRequestOTP" class="submit-btn"
-              :disabled="isVerifying">
-              {{ isVerifying ? 'ENVIANDO...' : 'ENVIAR CÓDIGO' }}
+            <button @click="showTwoFAModal = false" class="gov-btn-secondary">Cancelar</button>
+            <button v-if="!profile?.is_2fa_enabled" @click="handleRequestOTP" class="gov-btn-primary" :disabled="isVerifying">
+              {{ isVerifying ? 'Enviando...' : 'Enviar Código' }}
             </button>
-            <button v-else @click="handleDisable2FA" class="logout-btn">DESACTIVAR 2FA</button>
+            <button v-else @click="handleDisable2FA" class="gov-btn-danger">Desactivar 2FA</button>
           </div>
         </div>
         <div v-else>
-          <p>Ingresa el código de 6 dígitos enviado a tu correo.</p>
+          <p class="modal-subtitle">Ingrese el código de 6 dígitos enviado a su correo.</p>
           <div class="input-group">
-            <input v-model="otpToken" class="neon-input code-input" placeholder="000000" maxlength="6">
+            <input v-model="otpToken" class="gov-input code-input" placeholder="000000" maxlength="6">
           </div>
           <div class="modal-actions">
-            <button @click="twoFAStep = 'request'" class="cancel-btn">VOLVER</button>
-            <button @click="handleConfirm2FA" class="submit-btn" :disabled="isVerifying || otpToken.length < 6">
-              {{ isVerifying ? 'VERIFICANDO...' : 'CONFIRMAR' }}
+            <button @click="twoFAStep = 'request'" class="gov-btn-secondary">Volver</button>
+            <button @click="handleConfirm2FA" class="gov-btn-primary" :disabled="isVerifying || otpToken.length < 6">
+              {{ isVerifying ? 'Verificando...' : 'Confirmar y Activar' }}
             </button>
           </div>
         </div>
@@ -268,7 +289,7 @@ const handleConfirm2FA = async () => {
 }
 
 const handleDisable2FA = async () => {
-  if (confirm('¿Desactivar 2FA?')) {
+  if (confirm('Atención: Desactivar el 2FA en una cuenta de Administrador es un riesgo crítico. ¿Continuar?')) {
     await disable2FA()
     showTwoFAModal.value = false
   }
@@ -333,368 +354,221 @@ const getEventClass = (event) => {
 </script>
 
 <style scoped>
-.dashboard-wrapper {
+/* Reset y layout principal */
+.gov-layout {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f5f7fa;
+  margin: 0;
   position: absolute;
   top: 0;
   left: 0;
   width: 100vw;
-  min-height: 100vh;
-  background-color: #0d0d0d;
-  padding: 2rem 1rem;
-  box-sizing: border-box;
-  font-family: sans-serif;
-  color: #ffffff;
   overflow-y: auto;
 }
 
-.glow-box {
-  background-color: #111111;
-  padding: 2.5rem;
-  border-radius: 20px;
-  max-width: 1000px;
-  margin: 0 auto;
-  box-shadow: 0 0 15px rgba(0, 150, 255, 0.2);
-  border: 1px solid rgba(0, 150, 255, 0.2);
+/* --- HEADER --- */
+.gov-header {
+  background-color: #2c3136;
+  color: #ffffff;
+  padding: 1rem 0;
+  border-bottom: 4px solid #0056b3;
 }
 
-.dashboard-header {
+.header-content {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 0 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #333;
-  padding-bottom: 1rem;
-  margin-bottom: 2rem;
 }
 
-.header-left {
+.logo-area { display: flex; align-items: center; gap: 1rem; }
+.shield-icon { font-size: 2rem; }
+.titles h1 { margin: 0; font-size: 1.2rem; font-weight: 600; letter-spacing: 0.5px; }
+.titles p { margin: 0; font-size: 0.8rem; color: #a0aab2; }
+
+/* Header Actions y Mini Perfil */
+.header-actions {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 
-.user-info-mini {
+.admin-profile-badge {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
-  background: #1a1a1a;
-  padding: 5px 15px;
+  gap: 0.6rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.4rem 1rem;
   border-radius: 20px;
-  border: 1px solid #333;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ff4d4d;
-}
+.username { font-weight: 600; font-size: 0.9rem; }
 
-.status-dot.active {
-  background: #28a745;
-  box-shadow: 0 0 5px #28a745;
-}
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #fca5a5; }
+.status-dot.active { background: #86efac; }
 
 .mini-2fa-btn {
   background: transparent;
   border: none;
-  color: #0096ff;
-  font-size: 0.7rem;
-  font-weight: bold;
+  color: #93c5fd;
+  font-size: 0.75rem;
+  font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
+  padding: 0;
 }
+.mini-2fa-btn:hover { color: #ffffff; }
 
-.header-actions {
-  display: flex;
-  gap: 1rem;
-}
-
-h2 {
-  color: #0096ff;
-  margin: 0;
-}
-
-.refresh-btn,
-.logout-btn {
+.gov-btn-outline-light {
   background: transparent;
-  border-radius: 30px;
-  padding: 0.5rem 1.2rem;
-  font-size: 0.85rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.refresh-btn {
-  color: #0096ff;
-  border: 1px solid #0096ff;
-}
-
-.logout-btn {
-  color: #ff4d4d;
-  border: 1px solid #ff4d4d;
-}
-
-.refresh-btn:hover {
-  background: #0096ff;
-  color: white;
-}
-
-.logout-btn:hover {
-  background: #ff4d4d;
-  color: white;
-}
-
-.tabs {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  border-bottom: 1px solid #333;
-}
-
-.tabs button {
-  background: transparent;
-  border: none;
-  color: #888;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.tabs button.active {
-  color: #0096ff;
-  border-bottom: 2px solid #0096ff;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.add-btn {
-  background: #0096ff;
-  color: white;
-  border: none;
-  padding: 0.6rem 1.2rem;
+  color: #ffffff;
+  border: 1px solid #cbd5e0;
+  padding: 0.4rem 1rem;
   border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
-  font-weight: bold;
 }
+.gov-btn-outline-light:hover { background: rgba(255,255,255,0.1); }
 
-.table-responsive {
-  overflow-x: auto;
+.gov-logout-btn {
+  background-color: transparent;
+  color: #ffcccb;
+  border: 1px solid #c53030;
+  padding: 0.4rem 1rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
 }
+.gov-logout-btn:hover { background-color: #c53030; color: white; }
 
-table {
+/* --- CONTENIDO PRINCIPAL --- */
+.dashboard-main {
+  flex-grow: 1;
+  max-width: 1300px;
+  margin: 0 auto;
   width: 100%;
-  border-collapse: collapse;
-  background: #1a1a1a;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.dashboard-header-bar { margin-bottom: 1.5rem; }
+.dashboard-header-bar h2 { margin: 0 0 0.3rem 0; color: #2c3136; font-size: 1.8rem; }
+.subtitle { color: #4a5568; margin: 0; font-size: 0.95rem; }
+
+/* Tarjeta Principal */
+.gov-card {
+  background-color: #ffffff;
   border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border-top: 4px solid #0056b3;
+  padding: 0; /* Padding movido a las secciones */
   overflow: hidden;
 }
 
-th,
-td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #333;
+/* Tabs */
+.gov-tabs {
+  display: flex;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
 }
 
-th {
-  background: #222;
-  color: #0096ff;
-  font-weight: bold;
-}
-
-.role-badge {
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 0.75rem;
-  margin-right: 5px;
-  border: 1px solid #444;
-}
-
-.admin {
-  color: #0096ff;
-  border-color: #0096ff;
-}
-
-.auditor {
-  color: #ffa500;
-  border-color: #ffa500;
-}
-
-.edit-btn-small {
-  background: transparent;
-  color: #0096ff;
-  border: 1px solid #0096ff;
-  padding: 4px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  margin-right: 10px;
-}
-
-.edit-btn-small:hover {
-  background: #0096ff;
-  color: white;
-}
-
-.delete-icon {
+.gov-tabs button {
   background: transparent;
   border: none;
+  color: #718096;
+  padding: 1rem 1.5rem;
   cursor: pointer;
-  font-size: 1.1rem;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  width: 90%;
-  max-width: 450px;
-}
-
-.input-group {
-  margin-bottom: 1.2rem;
-  display: flex;
-  flex-direction: column;
-}
-
-.input-group label {
-  margin-bottom: 0.5rem;
-  color: #aaa;
+  font-weight: 600;
   font-size: 0.9rem;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
 }
 
-.neon-input {
-  background: #0d0d0d;
-  color: white;
-  border: 1px solid #444;
-  padding: 0.6rem;
-  border-radius: 4px;
-  outline: none;
-}
+.gov-tabs button:hover { color: #2c3136; background: #edf2f7; }
+.gov-tabs button.active { color: #0056b3; border-bottom: 3px solid #0056b3; background: #ffffff;}
 
-.neon-input:focus {
-  border-color: #0096ff;
-}
+/* Secciones Internas */
+.section { padding: 2rem; }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+h3 { margin: 0; color: #2c3136; font-size: 1.25rem; font-weight: 600; }
 
-.code-input {
-  text-align: center;
-  font-size: 1.5rem;
-  letter-spacing: 10px;
-}
+.add-role-form { display: flex; gap: 0.5rem; }
+.input-inline { min-width: 250px; margin-bottom: 0 !important; }
 
-.roles-checklist {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  background: #0d0d0d;
-  padding: 0.8rem;
-  border-radius: 4px;
-  border: 1px solid #444;
-}
+/* --- TABLAS --- */
+.table-responsive { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; }
+th, td { border-bottom: 1px solid #e2e8f0; padding: 12px 15px; text-align: left; font-size: 0.9rem; color: #4a5568; }
+th { background-color: #edf2f7; color: #2c3136; font-weight: 600; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; }
+tr:hover { background-color: #f8fafc; }
+.fw-bold { font-weight: 600; color: #2c3136; }
+.mono-text { font-family: monospace; color: #718096; font-size: 0.95em; }
 
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #ccc;
-  cursor: pointer;
-  font-size: 0.9rem;
-}
+/* --- BADGES Y BOTONES --- */
+.gov-btn-primary { background: #0056b3; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+.gov-btn-primary:hover { background: #004494; }
+.gov-btn-outline-small { background: transparent; color: #0056b3; border: 1px solid #0056b3; padding: 0.3rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 600; margin-right: 0.5rem; }
+.gov-btn-outline-small:hover { background: #0056b3; color: white; }
+.gov-btn-danger-icon { background: #fff5f5; border: 1px solid #feb2b2; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 1rem; color: #c53030; }
+.gov-btn-danger-icon:hover { background: #fed7d7; }
 
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 2rem;
-}
+/* Badges de Roles */
+.role-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-right: 5px; display: inline-block; }
+.admin { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+.auditor { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.user { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+.default-role { background: #e2e8f0; color: #1e293b; }
 
-.cancel-btn {
-  background: #333;
-  color: white;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 4px;
-  cursor: pointer;
-}
+/* Badges de Eventos */
+.event-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+.success { background-color: #def7ec; color: #03543f; border: 1px solid #84e1bc; }
+.danger { background-color: #fde8e8; color: #9b1c1c; border: 1px solid #f8b4b4; }
+.warning { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
 
-.submit-btn {
-  background: #0096ff;
-  color: white;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-}
+/* --- MODALES --- */
+.gov-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(44, 49, 54, 0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(2px); }
+.gov-modal-content { background: #ffffff; width: 90%; max-width: 500px; padding: 2.5rem; border-radius: 8px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); border-top: 4px solid #0056b3; }
+.gov-modal-content h3 { margin-top: 0; color: #2c3136; font-size: 1.4rem; margin-bottom: 0.5rem; }
+.modal-subtitle { color: #666; font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.4; }
+.input-group { margin-bottom: 1.2rem; display: flex; flex-direction: column; }
+.input-group label { margin-bottom: 0.4rem; color: #4a5568; font-size: 0.85rem; font-weight: 600; }
+.gov-input { background: #ffffff; color: #2d3748; border: 1px solid #cbd5e0; padding: 0.75rem; border-radius: 4px; outline: none; font-family: inherit; font-size: 0.95rem; }
+.gov-input:focus { border-color: #0056b3; box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1); }
 
-.submit-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.roles-checklist { display: flex; flex-wrap: wrap; gap: 1rem; background: #f8fafc; padding: 1rem; border-radius: 4px; border: 1px solid #e2e8f0; }
+.checkbox-label { display: flex; align-items: center; gap: 0.5rem; color: #4a5568; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
+.gov-checkbox { width: 16px; height: 16px; accent-color: #0056b3; cursor: pointer; }
 
-.alert-info {
-  background: rgba(0, 150, 255, 0.1);
-  color: #0096ff;
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1.5rem;
-  border-left: 4px solid #0096ff;
-  cursor: pointer;
-}
+.modal-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1.5rem; }
+.gov-btn-secondary { background: #edf2f7; color: #4a5568; border: 1px solid #cbd5e0; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
+.gov-btn-secondary:hover { background: #e2e8f0; }
+.gov-btn-danger { background: #c53030; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
 
-.modal-alert-error {
-  background: rgba(255, 77, 77, 0.1);
-  color: #ff4d4d;
-  padding: 0.8rem 1.2rem;
-  border-radius: 4px;
-  margin-bottom: 1.5rem;
-  border-left: 4px solid #ff4d4d;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: bold;
-}
+.alert-info { background: #e6f7ff; color: #0056b3; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem; cursor: pointer; border-left: 4px solid #0056b3; font-weight: 500; }
+.modal-alert-error { background: #fff5f5; color: #c53030; padding: 0.8rem 1.2rem; border-radius: 4px; margin-bottom: 1.5rem; border-left: 4px solid #c53030; font-weight: 600; font-size: 0.9rem; cursor: pointer; }
+.loading { text-align: center; color: #0056b3; padding: 2rem; font-weight: 600; }
+.mt-2 { margin-top: 2rem; }
+.mb-2 { margin-bottom: 2rem; }
+.code-input { text-align: center; font-size: 1.5rem; letter-spacing: 8px; font-weight: bold; }
 
-.event-badge {
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 0.8rem;
-  font-weight: bold;
-}
+/* --- FOOTER --- */
+.gov-footer { background-color: #2c3136; color: #a0aab2; text-align: center; padding: 1.5rem; font-size: 0.85rem; }
 
-.success {
-  color: #28a745;
-  border: 1px solid #28a745;
-}
-
-.danger {
-  color: #ff4d4d;
-  border: 1px solid #ff4d4d;
-}
-
-.warning {
-  color: #ffa500;
-  border: 1px solid #ffa500;
-}
-
-.loading {
-  text-align: center;
-  color: #0096ff;
-  padding: 2rem;
+@media (max-width: 768px) {
+  .header-content { flex-direction: column; gap: 1rem; text-align: center; }
+  .header-actions { flex-direction: column; }
+  .gov-tabs { flex-wrap: wrap; }
+  .gov-tabs button { width: 100%; text-align: left; border-bottom: 1px solid #e2e8f0; }
+  .gov-tabs button.active { border-left: 4px solid #0056b3; border-bottom: none; }
+  .section-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
 }
 </style>
