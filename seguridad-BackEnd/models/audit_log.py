@@ -10,7 +10,7 @@ class AuditLog(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     details = db.Column(db.Text)
 
-    user = db.relationship('User', backref=db.backref('audit_logs', lazy=True))
+    user = db.relationship('User', backref=db.backref('audit_logs', cascade="all, delete-orphan", lazy=True))
 
     def __repr__(self):
         return f'<AuditLog {self.action} by {self.user_id} at {self.timestamp}>'
@@ -20,10 +20,14 @@ class Session(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     ip_address = db.Column(db.String(45))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    login_at = db.Column(db.DateTime, default=datetime.utcnow)
+    login_obs = db.Column(db.String(255))
+    logout_at = db.Column(db.DateTime)
+    logout_obs = db.Column(db.String(255))
+    expires_at = db.Column(db.DateTime, nullable=False)
     is_active = db.Column(db.Boolean, default=True)
 
-    user = db.relationship('User', backref=db.backref('sessions', lazy=True))
+    user = db.relationship('User', backref=db.backref('sessions', cascade="all, delete-orphan", lazy=True))
 
     def __repr__(self):
         return f'<Session {self.id} for user {self.user_id}>'

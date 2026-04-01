@@ -10,6 +10,11 @@ class Config:
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
     TOTP_SECRET_KEY = os.environ.get('TOTP_SECRET_KEY')
     
+    # Session Settings
+    SESSION_TIMEOUT_MINUTES = int(os.environ.get('SESSION_TIMEOUT_MINUTES') or 30)
+    from datetime import timedelta
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=SESSION_TIMEOUT_MINUTES)
+    
     # Mail settings (for 2FA via email)
     MAIL_SERVER = os.environ.get('MAIL_SERVER')
     MAIL_PORT = int(os.environ.get('MAIL_PORT') or 587)

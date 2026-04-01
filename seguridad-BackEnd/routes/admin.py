@@ -7,32 +7,50 @@ from utils.decorators import role_required
 from utils.validators import validate_password
 from flask_jwt_extended import jwt_required
 
+import datetime
 admin_bp = Blueprint('admin', __name__)
+
+def check_and_close_expired_sessions():
+    now = datetime.datetime.utcnow()
+    expired = Session.query.filter(Session.is_active == True, Session.expires_at < now).all()
+    for s in expired:
+        s.is_active = False
+        s.logout_at = s.expires_at
+        s.logout_obs = "Expiración de sesión / Inactividad / Cierre inesperado"
+    if expired:
+        db.session.commit()
 
 @admin_bp.route('/sessions', methods=['GET'])
 @jwt_required()
 @role_required(['ADMIN'])
 def get_active_sessions():
+    check_and_close_expired_sessions()
     active_sessions = Session.query.filter_by(is_active=True).all()
     return jsonify([{
         'id': s.id,
         'username': s.user.username,
         'ip_address': s.ip_address,
-        'created_at': s.created_at
+        'login_at': s.login_at,
+        'login_obs': s.login_obs,
+        'expires_at': s.expires_at
     } for s in active_sessions]), 200
 
 @admin_bp.route('/sessions/history', methods=['GET'])
 @jwt_required()
-@role_required(['ADMIN'])
+@role_required(['ADMIN', 'AUDITOR'])
 def get_session_history():
-    logs = AuditLog.query.filter(AuditLog.action.in_(['LOGIN_SUCCESS', 'LOGIN_SUCCESS_2FA', 'LOGOUT'])).order_by(AuditLog.timestamp.desc()).all()
+    check_and_close_expired_sessions()
+    sessions = Session.query.order_by(Session.login_at.desc()).all()
     return jsonify([{
-        'id': log.id,
-        'username': log.user.username if log.user else 'Unknown',
-        'action': log.action,
-        'ip_address': log.ip_address,
-        'timestamp': log.timestamp
-    } for log in logs]), 200
+        'id': s.id,
+        'username': s.user.username,
+        'login_at': s.login_at,
+        'login_obs': s.login_obs,
+        'logout_at': s.logout_at,
+        'logout_obs': s.logout_obs,
+        'ip_address': s.ip_address,
+        'is_active': s.is_active
+    } for s in sessions]), 200
 
 @admin_bp.route('/users', methods=['GET'])
 @jwt_required()
@@ -148,6 +166,26 @@ def create_role():
     db.session.add(new_role)
     db.session.commit()
     return jsonify(msg=f"Role {role_name} created"), 201
+
+@admin_bp.route('/roles/<int:role_id>', methods=['PUT'])
+@jwt_required()
+@role_required(['ADMIN'])
+def update_role(role_id):
+    role = Role.query.get(role_id)
+    if not role:
+        return jsonify(msg="Role not found"), 404
+        
+    data = request.get_json()
+    new_name = data.get('name')
+    if not new_name:
+        return jsonify(msg="Role name is required"), 400
+        
+    if Role.query.filter(Role.name == new_name, Role.id != role_id).first():
+        return jsonify(msg="Role name already exists"), 400
+        
+    role.name = new_name
+    db.session.commit()
+    return jsonify(msg=f"Role updated to {new_name}"), 200
 
 @admin_bp.route('/assign-role', methods=['POST'])
 @jwt_required()

@@ -63,10 +63,12 @@ def update_profile():
 @jwt_required()
 def logout():
     user_id = get_jwt_identity()
-    # Mask session as inactive
+    # Mark session as inactive and record audit info
     active_session = Session.query.filter_by(user_id=int(user_id), is_active=True).first()
     if active_session:
         active_session.is_active = False
+        active_session.logout_at = datetime.datetime.utcnow()
+        active_session.logout_obs = "Cierre de sesión manual"
         db.session.commit()
     
     log = AuditLog(user_id=int(user_id), action='LOGOUT', ip_address=request.remote_addr)
