@@ -9,7 +9,7 @@
             <p>Sistema Único de Trámites Bolivia</p>
           </div>
         </div>
-        
+
         <div class="header-actions">
           <div v-if="profile" class="admin-profile-badge">
             <span class="username">{{ profile.username }}</span>
@@ -19,7 +19,7 @@
               {{ profile.is_2fa_enabled ? '2FA OK' : 'Activar 2FA' }}
             </button>
           </div>
-          
+
           <button @click="refresh" class="gov-btn-outline-light">Refrescar</button>
           <button @click="handleLogout" class="gov-logout-btn">Cerrar Sesión</button>
         </div>
@@ -40,7 +40,8 @@
         <div class="gov-tabs">
           <button :class="{ active: activeTab === 'users' }" @click="activeTab = 'users'">USUARIOS</button>
           <button :class="{ active: activeTab === 'roles' }" @click="activeTab = 'roles'">ROLES</button>
-          <button :class="{ active: activeTab === 'sessions' }" @click="activeTab = 'sessions'">SESIONES ACTIVAS</button>
+          <button :class="{ active: activeTab === 'sessions' }" @click="activeTab = 'sessions'">SESIONES
+            ACTIVAS</button>
         </div>
 
         <div v-if="isLoading" class="loading">Cargando información del sistema...</div>
@@ -51,7 +52,7 @@
               <h3>Directorio de Usuarios</h3>
               <button @click="openCreateModal" class="gov-btn-primary">+ Nuevo Funcionario / Ciudadano</button>
             </div>
-            
+
             <div class="table-responsive">
               <table>
                 <thead>
@@ -75,7 +76,8 @@
                     </td>
                     <td>
                       <button @click="openEditModal(user)" class="gov-btn-outline-small">Editar</button>
-                      <button @click="deleteUser(user.id)" class="gov-btn-danger-icon" title="Eliminar Usuario">🗑️</button>
+                      <button @click="deleteUser(user.id)" class="gov-btn-danger-icon"
+                        title="Eliminar Usuario">🗑️</button>
                     </td>
                   </tr>
                 </tbody>
@@ -86,24 +88,24 @@
           <div v-if="activeTab === 'roles'" class="section">
             <div class="section-header">
               <h3>Gestión de Privilegios (Roles)</h3>
-              <div class="add-role-form">
-                <input v-model="newRoleName" placeholder="Ej: SUPERVISOR" class="gov-input input-inline">
-                <button @click="handleCreateRole" class="gov-btn-primary">Añadir Rol</button>
-              </div>
             </div>
-            
+
             <div class="table-responsive">
               <table>
                 <thead>
                   <tr>
                     <th style="width: 80px;">ID</th>
                     <th>Identificador del Rol</th>
+                    <th style="width: 150px;">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="role in roles" :key="role.id">
                     <td class="fw-bold">{{ role.id }}</td>
                     <td><span class="role-badge default-role">{{ role.name }}</span></td>
+                    <td>
+                      <button @click="openEditRoleModal(role)" class="gov-btn-outline-small">Editar Nombre</button>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -119,13 +121,15 @@
                     <th>Usuario conectado</th>
                     <th>Dirección IP</th>
                     <th>Hora de Inicio</th>
+                    <th>Expira en</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="s in activeSessions" :key="s.id">
                     <td class="fw-bold">{{ s.username }}</td>
                     <td class="mono-text">{{ s.ip_address }}</td>
-                    <td>{{ formatDate(s.created_at) }}</td>
+                    <td>{{ formatDate(s.login_at) }}</td>
+                    <td><span class="event-badge warning">{{ formatDate(s.expires_at) }}</span></td>
                   </tr>
                 </tbody>
               </table>
@@ -137,19 +141,21 @@
                 <thead>
                   <tr>
                     <th>Usuario</th>
-                    <th>Evento Registrado</th>
-                    <th>Dirección IP</th>
-                    <th>Fecha y Hora</th>
+                    <th>Login (Fecha/Hora)</th>
+                    <th>Obs. Login</th>
+                    <th>Logout (Fecha/Hora)</th>
+                    <th>Obs. Logout</th>
+                    <th>IP</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="h in sessionHistory" :key="h.id">
                     <td class="fw-bold">{{ h.username }}</td>
-                    <td>
-                      <span :class="['event-badge', getEventClass(h.action)]">{{ h.action }}</span>
-                    </td>
+                    <td>{{ formatDate(h.login_at) }}</td>
+                    <td><small>{{ h.login_obs }}</small></td>
+                    <td>{{ h.is_active ? 'ACTIVA' : formatDate(h.logout_at) }}</td>
+                    <td><small>{{ h.is_active ? '-' : h.logout_obs }}</small></td>
                     <td class="mono-text">{{ h.ip_address }}</td>
-                    <td>{{ formatDate(h.timestamp) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -167,11 +173,11 @@
       <div class="gov-modal-content">
         <h3>{{ isEditing ? 'Actualizar Credenciales' : 'Registrar Nuevo Usuario' }}</h3>
         <p class="modal-subtitle">Complete el formulario para asignar accesos en el sistema.</p>
-        
+
         <div v-if="modalError" class="modal-alert-error" @click="modalError = ''">
           {{ modalError }}
         </div>
-        
+
         <form @submit.prevent="handleSubmitUser">
           <div class="input-group">
             <label>Identificación (Usuario / Documento)</label>
@@ -213,14 +219,16 @@
         <h3>Seguridad de la Cuenta (2FA)</h3>
         <div v-if="twoFAStep === 'request'">
           <p class="modal-subtitle" v-if="!profile?.is_2fa_enabled">
-            Como administrador, es obligatorio asegurar su cuenta. Enviaremos un código a: <strong>{{ profile?.email }}</strong>
+            Como administrador, es obligatorio asegurar su cuenta. Enviaremos un código a: <strong>{{ profile?.email
+            }}</strong>
           </p>
           <p class="modal-subtitle" v-else>
             El segundo factor está actualmente activo protegiendo su cuenta. ¿Desea desactivarlo bajo su propio riesgo?
           </p>
           <div class="modal-actions">
             <button @click="showTwoFAModal = false" class="gov-btn-secondary">Cancelar</button>
-            <button v-if="!profile?.is_2fa_enabled" @click="handleRequestOTP" class="gov-btn-primary" :disabled="isVerifying">
+            <button v-if="!profile?.is_2fa_enabled" @click="handleRequestOTP" class="gov-btn-primary"
+              :disabled="isVerifying">
               {{ isVerifying ? 'Enviando...' : 'Enviar Código' }}
             </button>
             <button v-else @click="handleDisable2FA" class="gov-btn-danger">Desactivar 2FA</button>
@@ -240,18 +248,40 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal Editar Rol -->
+    <div v-if="showRoleModal" class="gov-modal-overlay">
+      <div class="gov-modal-content">
+        <h3>Editar Identificador de Rol</h3>
+        <p class="modal-subtitle">Modifique el nombre del rol. Tenga en cuenta que esto afectará a todos los usuarios
+          asignados.</p>
+
+        <form @submit.prevent="handleUpdateRole">
+          <div class="input-group">
+            <label>Nombre del Rol</label>
+            <input v-model="roleForm.name" required class="gov-input" placeholder="Ej: AUDITOR_SENIOR">
+          </div>
+          <div class="modal-actions">
+            <button type="button" @click="showRoleModal = false" class="gov-btn-secondary">Cancelar</button>
+            <button type="submit" class="gov-btn-primary" :disabled="isSubmitting">
+              {{ isSubmitting ? 'Guardando...' : 'Actualizar Rol' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useAdmin } from '@/composables/useAdmin'
 import { useUser } from '@/composables/useUser'
 
 const {
   users, roles, activeSessions, sessionHistory,
   isLoading, message, createUser, deleteUser,
-  updateUser, createRole, handleLogout, refresh
+  updateUser, createRole, updateRole, handleLogout, refresh
 } = useAdmin()
 
 const { profile, request2FA, confirm2FA, disable2FA } = useUser()
@@ -263,6 +293,22 @@ const isSubmitting = ref(false)
 const editingUserId = ref(null)
 const newRoleName = ref('')
 const modalError = ref('')
+
+// Roles logic
+const showRoleModal = ref(false)
+const roleForm = ref({ id: null, name: '' })
+
+const openEditRoleModal = (role) => {
+  roleForm.value = { id: role.id, name: role.name }
+  showRoleModal.value = true
+}
+
+const handleUpdateRole = async () => {
+  isSubmitting.value = true
+  const success = await updateRole(roleForm.value.id, roleForm.value.name)
+  isSubmitting.value = false
+  if (success) showRoleModal.value = false
+}
 
 // 2FA Admin/Perso
 const showTwoFAModal = ref(false)
@@ -351,6 +397,17 @@ const getEventClass = (event) => {
   if (event.includes('LOGOUT')) return 'warning'
   return 'default'
 }
+
+let refreshInterval = null
+onMounted(() => {
+  refreshInterval = setInterval(() => {
+    refresh(true)
+  }, 10000) // Refresca cada 10 segundos
+})
+
+onUnmounted(() => {
+  if (refreshInterval) clearInterval(refreshInterval)
+})
 </script>
 
 <style scoped>
@@ -386,10 +443,28 @@ const getEventClass = (event) => {
   align-items: center;
 }
 
-.logo-area { display: flex; align-items: center; gap: 1rem; }
-.shield-icon { font-size: 2rem; }
-.titles h1 { margin: 0; font-size: 1.2rem; font-weight: 600; letter-spacing: 0.5px; }
-.titles p { margin: 0; font-size: 0.8rem; color: #a0aab2; }
+.logo-area {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.shield-icon {
+  font-size: 2rem;
+}
+
+.titles h1 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.titles p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #a0aab2;
+}
 
 /* Header Actions y Mini Perfil */
 .header-actions {
@@ -408,10 +483,21 @@ const getEventClass = (event) => {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.username { font-weight: 600; font-size: 0.9rem; }
+.username {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
 
-.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #fca5a5; }
-.status-dot.active { background: #86efac; }
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fca5a5;
+}
+
+.status-dot.active {
+  background: #86efac;
+}
 
 .mini-2fa-btn {
   background: transparent;
@@ -423,7 +509,10 @@ const getEventClass = (event) => {
   text-decoration: underline;
   padding: 0;
 }
-.mini-2fa-btn:hover { color: #ffffff; }
+
+.mini-2fa-btn:hover {
+  color: #ffffff;
+}
 
 .gov-btn-outline-light {
   background: transparent;
@@ -435,7 +524,10 @@ const getEventClass = (event) => {
   font-weight: 600;
   cursor: pointer;
 }
-.gov-btn-outline-light:hover { background: rgba(255,255,255,0.1); }
+
+.gov-btn-outline-light:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
 
 .gov-logout-btn {
   background-color: transparent;
@@ -448,7 +540,11 @@ const getEventClass = (event) => {
   cursor: pointer;
   transition: all 0.2s;
 }
-.gov-logout-btn:hover { background-color: #c53030; color: white; }
+
+.gov-logout-btn:hover {
+  background-color: #c53030;
+  color: white;
+}
 
 /* --- CONTENIDO PRINCIPAL --- */
 .dashboard-main {
@@ -460,9 +556,21 @@ const getEventClass = (event) => {
   box-sizing: border-box;
 }
 
-.dashboard-header-bar { margin-bottom: 1.5rem; }
-.dashboard-header-bar h2 { margin: 0 0 0.3rem 0; color: #2c3136; font-size: 1.8rem; }
-.subtitle { color: #4a5568; margin: 0; font-size: 0.95rem; }
+.dashboard-header-bar {
+  margin-bottom: 1.5rem;
+}
+
+.dashboard-header-bar h2 {
+  margin: 0 0 0.3rem 0;
+  color: #2c3136;
+  font-size: 1.8rem;
+}
+
+.subtitle {
+  color: #4a5568;
+  margin: 0;
+  font-size: 0.95rem;
+}
 
 /* Tarjeta Principal */
 .gov-card {
@@ -470,7 +578,8 @@ const getEventClass = (event) => {
   border-radius: 8px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   border-top: 4px solid #0056b3;
-  padding: 0; /* Padding movido a las secciones */
+  padding: 0;
+  /* Padding movido a las secciones */
   overflow: hidden;
 }
 
@@ -493,82 +602,410 @@ const getEventClass = (event) => {
   transition: all 0.2s;
 }
 
-.gov-tabs button:hover { color: #2c3136; background: #edf2f7; }
-.gov-tabs button.active { color: #0056b3; border-bottom: 3px solid #0056b3; background: #ffffff;}
+.gov-tabs button:hover {
+  color: #2c3136;
+  background: #edf2f7;
+}
+
+.gov-tabs button.active {
+  color: #0056b3;
+  border-bottom: 3px solid #0056b3;
+  background: #ffffff;
+}
 
 /* Secciones Internas */
-.section { padding: 2rem; }
-.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-h3 { margin: 0; color: #2c3136; font-size: 1.25rem; font-weight: 600; }
+.section {
+  padding: 2rem;
+}
 
-.add-role-form { display: flex; gap: 0.5rem; }
-.input-inline { min-width: 250px; margin-bottom: 0 !important; }
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+h3 {
+  margin: 0;
+  color: #2c3136;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.add-role-form {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input-inline {
+  min-width: 250px;
+  margin-bottom: 0 !important;
+}
 
 /* --- TABLAS --- */
-.table-responsive { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; }
-th, td { border-bottom: 1px solid #e2e8f0; padding: 12px 15px; text-align: left; font-size: 0.9rem; color: #4a5568; }
-th { background-color: #edf2f7; color: #2c3136; font-weight: 600; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; }
-tr:hover { background-color: #f8fafc; }
-.fw-bold { font-weight: 600; color: #2c3136; }
-.mono-text { font-family: monospace; color: #718096; font-size: 0.95em; }
+.table-responsive {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+}
+
+th,
+td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 12px 15px;
+  text-align: left;
+  font-size: 0.9rem;
+  color: #4a5568;
+}
+
+th {
+  background-color: #edf2f7;
+  color: #2c3136;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+}
+
+tr:hover {
+  background-color: #f8fafc;
+}
+
+.fw-bold {
+  font-weight: 600;
+  color: #2c3136;
+}
+
+.mono-text {
+  font-family: monospace;
+  color: #718096;
+  font-size: 0.95em;
+}
 
 /* --- BADGES Y BOTONES --- */
-.gov-btn-primary { background: #0056b3; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
-.gov-btn-primary:hover { background: #004494; }
-.gov-btn-outline-small { background: transparent; color: #0056b3; border: 1px solid #0056b3; padding: 0.3rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 600; margin-right: 0.5rem; }
-.gov-btn-outline-small:hover { background: #0056b3; color: white; }
-.gov-btn-danger-icon { background: #fff5f5; border: 1px solid #feb2b2; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 1rem; color: #c53030; }
-.gov-btn-danger-icon:hover { background: #fed7d7; }
+.gov-btn-primary {
+  background: #0056b3;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.gov-btn-primary:hover {
+  background: #004494;
+}
+
+.gov-btn-outline-small {
+  background: transparent;
+  color: #0056b3;
+  border: 1px solid #0056b3;
+  padding: 0.3rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+.gov-btn-outline-small:hover {
+  background: #0056b3;
+  color: white;
+}
+
+.gov-btn-danger-icon {
+  background: #fff5f5;
+  border: 1px solid #feb2b2;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #c53030;
+}
+
+.gov-btn-danger-icon:hover {
+  background: #fed7d7;
+}
 
 /* Badges de Roles */
-.role-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-right: 5px; display: inline-block; }
-.admin { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
-.auditor { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-.user { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
-.default-role { background: #e2e8f0; color: #1e293b; }
+.role-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-right: 5px;
+  display: inline-block;
+}
+
+.admin {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+}
+
+.auditor {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.user {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.default-role {
+  background: #e2e8f0;
+  color: #1e293b;
+}
 
 /* Badges de Eventos */
-.event-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
-.success { background-color: #def7ec; color: #03543f; border: 1px solid #84e1bc; }
-.danger { background-color: #fde8e8; color: #9b1c1c; border: 1px solid #f8b4b4; }
-.warning { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.event-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.success {
+  background-color: #def7ec;
+  color: #03543f;
+  border: 1px solid #84e1bc;
+}
+
+.danger {
+  background-color: #fde8e8;
+  color: #9b1c1c;
+  border: 1px solid #f8b4b4;
+}
+
+.warning {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
 
 /* --- MODALES --- */
-.gov-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(44, 49, 54, 0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(2px); }
-.gov-modal-content { background: #ffffff; width: 90%; max-width: 500px; padding: 2.5rem; border-radius: 8px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); border-top: 4px solid #0056b3; }
-.gov-modal-content h3 { margin-top: 0; color: #2c3136; font-size: 1.4rem; margin-bottom: 0.5rem; }
-.modal-subtitle { color: #666; font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.4; }
-.input-group { margin-bottom: 1.2rem; display: flex; flex-direction: column; }
-.input-group label { margin-bottom: 0.4rem; color: #4a5568; font-size: 0.85rem; font-weight: 600; }
-.gov-input { background: #ffffff; color: #2d3748; border: 1px solid #cbd5e0; padding: 0.75rem; border-radius: 4px; outline: none; font-family: inherit; font-size: 0.95rem; }
-.gov-input:focus { border-color: #0056b3; box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1); }
+.gov-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(44, 49, 54, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
 
-.roles-checklist { display: flex; flex-wrap: wrap; gap: 1rem; background: #f8fafc; padding: 1rem; border-radius: 4px; border: 1px solid #e2e8f0; }
-.checkbox-label { display: flex; align-items: center; gap: 0.5rem; color: #4a5568; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
-.gov-checkbox { width: 16px; height: 16px; accent-color: #0056b3; cursor: pointer; }
+.gov-modal-content {
+  background: #ffffff;
+  width: 90%;
+  max-width: 500px;
+  padding: 2.5rem;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border-top: 4px solid #0056b3;
+}
 
-.modal-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1.5rem; }
-.gov-btn-secondary { background: #edf2f7; color: #4a5568; border: 1px solid #cbd5e0; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
-.gov-btn-secondary:hover { background: #e2e8f0; }
-.gov-btn-danger { background: #c53030; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
+.gov-modal-content h3 {
+  margin-top: 0;
+  color: #2c3136;
+  font-size: 1.4rem;
+  margin-bottom: 0.5rem;
+}
 
-.alert-info { background: #e6f7ff; color: #0056b3; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem; cursor: pointer; border-left: 4px solid #0056b3; font-weight: 500; }
-.modal-alert-error { background: #fff5f5; color: #c53030; padding: 0.8rem 1.2rem; border-radius: 4px; margin-bottom: 1.5rem; border-left: 4px solid #c53030; font-weight: 600; font-size: 0.9rem; cursor: pointer; }
-.loading { text-align: center; color: #0056b3; padding: 2rem; font-weight: 600; }
-.mt-2 { margin-top: 2rem; }
-.mb-2 { margin-bottom: 2rem; }
-.code-input { text-align: center; font-size: 1.5rem; letter-spacing: 8px; font-weight: bold; }
+.modal-subtitle {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.4;
+}
+
+.input-group {
+  margin-bottom: 1.2rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.input-group label {
+  margin-bottom: 0.4rem;
+  color: #4a5568;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.gov-input {
+  background: #ffffff;
+  color: #2d3748;
+  border: 1px solid #cbd5e0;
+  padding: 0.75rem;
+  border-radius: 4px;
+  outline: none;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.gov-input:focus {
+  border-color: #0056b3;
+  box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
+}
+
+.roles-checklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  background: #f8fafc;
+  padding: 1rem;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #4a5568;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.gov-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #0056b3;
+  cursor: pointer;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1.5rem;
+}
+
+.gov-btn-secondary {
+  background: #edf2f7;
+  color: #4a5568;
+  border: 1px solid #cbd5e0;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.gov-btn-secondary:hover {
+  background: #e2e8f0;
+}
+
+.gov-btn-danger {
+  background: #c53030;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.alert-info {
+  background: #e6f7ff;
+  color: #0056b3;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+  cursor: pointer;
+  border-left: 4px solid #0056b3;
+  font-weight: 500;
+}
+
+.modal-alert-error {
+  background: #fff5f5;
+  color: #c53030;
+  padding: 0.8rem 1.2rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #c53030;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.loading {
+  text-align: center;
+  color: #0056b3;
+  padding: 2rem;
+  font-weight: 600;
+}
+
+.mt-2 {
+  margin-top: 2rem;
+}
+
+.mb-2 {
+  margin-bottom: 2rem;
+}
+
+.code-input {
+  text-align: center;
+  font-size: 1.5rem;
+  letter-spacing: 8px;
+  font-weight: bold;
+}
 
 /* --- FOOTER --- */
-.gov-footer { background-color: #2c3136; color: #a0aab2; text-align: center; padding: 1.5rem; font-size: 0.85rem; }
+.gov-footer {
+  background-color: #2c3136;
+  color: #a0aab2;
+  text-align: center;
+  padding: 1.5rem;
+  font-size: 0.85rem;
+}
 
 @media (max-width: 768px) {
-  .header-content { flex-direction: column; gap: 1rem; text-align: center; }
-  .header-actions { flex-direction: column; }
-  .gov-tabs { flex-wrap: wrap; }
-  .gov-tabs button { width: 100%; text-align: left; border-bottom: 1px solid #e2e8f0; }
-  .gov-tabs button.active { border-left: 4px solid #0056b3; border-bottom: none; }
-  .section-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .header-content {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .header-actions {
+    flex-direction: column;
+  }
+
+  .gov-tabs {
+    flex-wrap: wrap;
+  }
+
+  .gov-tabs button {
+    width: 100%;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .gov-tabs button.active {
+    border-left: 4px solid #0056b3;
+    border-bottom: none;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
 }
 </style>

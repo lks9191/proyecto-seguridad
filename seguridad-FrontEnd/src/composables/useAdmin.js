@@ -14,8 +14,8 @@ export function useAdmin() {
   const isLoading = ref(false)
   const message = ref('')
 
-  const fetchData = async () => {
-    isLoading.value = true
+  const fetchData = async (silent = false) => {
+    if (!silent) isLoading.value = true
     try {
       const [usersRes, rolesRes, sessionsRes, historyRes] = await Promise.all([
         api.get('/admin/users'),
@@ -90,6 +90,18 @@ export function useAdmin() {
     }
   }
 
+  const updateRole = async (roleId, roleName) => {
+    try {
+      await api.put(`/admin/roles/${roleId}`, { name: roleName })
+      message.value = 'Rol actualizado con éxito.'
+      fetchData()
+      return true
+    } catch (error) {
+      message.value = error.response?.data?.msg || 'Error al actualizar rol.'
+      return false
+    }
+  }
+
   const handleLogout = async () => {
     try {
       await api.post('/user/logout')
@@ -114,6 +126,7 @@ export function useAdmin() {
     changeUserRole,
     updateUser,
     createRole,
+    updateRole,
     handleLogout,
     refresh: fetchData
   }

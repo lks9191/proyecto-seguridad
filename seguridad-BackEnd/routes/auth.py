@@ -92,7 +92,14 @@ def login():
     
     # Create a session
     from models.audit_log import Session
-    new_session = Session(user_id=user.id, ip_address=ip_address)
+    from flask import current_app
+    expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=current_app.config['SESSION_TIMEOUT_MINUTES'])
+    new_session = Session(
+        user_id=user.id, 
+        ip_address=ip_address, 
+        expires_at=expires_at,
+        login_obs="Inicio de sesión estándar"
+    )
     db.session.add(new_session)
     
     log = AuditLog(user_id=user.id, action='LOGIN_SUCCESS', ip_address=ip_address, details=f"Iniciado como {primary_role}")
@@ -135,7 +142,14 @@ def verify_2fa():
         
         # Create a session
         from models.audit_log import Session
-        new_session = Session(user_id=user.id, ip_address=request.remote_addr)
+        from flask import current_app
+        expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=current_app.config['SESSION_TIMEOUT_MINUTES'])
+        new_session = Session(
+            user_id=user.id, 
+            ip_address=request.remote_addr,
+            expires_at=expires_at,
+            login_obs="Inicio de sesión con 2FA"
+        )
         db.session.add(new_session)
         
         log = AuditLog(user_id=user.id, action='LOGIN_SUCCESS_2FA', ip_address=request.remote_addr, details=f"Iniciado como {primary_role}")

@@ -12,8 +12,8 @@ export function useAuditor() {
   const isLoading = ref(false)
   const message = ref('')
 
-  const fetchLogs = async () => {
-    isLoading.value = true
+  const fetchLogs = async (silent = false) => {
+    if (!silent) isLoading.value = true
     try {
       const [sessionsRes, historyRes] = await Promise.all([
         api.get('/auditor/sessions'),
