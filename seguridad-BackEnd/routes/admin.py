@@ -28,7 +28,8 @@ def get_active_sessions():
     active_sessions = Session.query.filter_by(is_active=True).all()
     return jsonify([{
         'id': s.id,
-        'username': s.user.username,
+        'username': s.user.carnet,
+        'full_name': f"{s.user.names} {s.user.paternal_surname} {s.user.maternal_surname or ''}".strip(),
         'ip_address': s.ip_address,
         'login_at': s.login_at,
         'login_obs': s.login_obs,
@@ -43,7 +44,8 @@ def get_session_history():
     sessions = Session.query.order_by(Session.login_at.desc()).all()
     return jsonify([{
         'id': s.id,
-        'username': s.user.username,
+        'username': s.user.carnet,
+        'full_name': f"{s.user.names} {s.user.paternal_surname} {s.user.maternal_surname or ''}".strip(),
         'login_at': s.login_at,
         'login_obs': s.login_obs,
         'logout_at': s.logout_at,
@@ -55,36 +57,49 @@ def get_session_history():
 @admin_bp.route('/users', methods=['GET'])
 @jwt_required()
 @role_required(['ADMIN'])
-def get_all_users():
+def get_users():
     users = User.query.all()
     return jsonify([{
-        'id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'roles': [role.name for role in user.roles]
-    } for user in users]), 200
+        'id': u.id,
+        'carnet': u.carnet,
+        'names': u.names,
+        'paternal_surname': u.paternal_surname,
+        'maternal_surname': u.maternal_surname,
+        'email': u.email,
+        'roles': [r.name for r in u.roles],
+        'is_2fa_enabled': u.is_2fa_enabled
+    } for u in users]), 200
 
 @admin_bp.route('/users', methods=['POST'])
 @jwt_required()
 @role_required(['ADMIN'])
 def create_user():
     data = request.get_json()
-    username = data.get('username')
+    carnet = data.get('carnet')
+    names = data.get('names')
+    paternal_surname = data.get('paternal_surname')
+    maternal_surname = data.get('maternal_surname')
     email = data.get('email')
     password = data.get('password')
-    roles_list = data.get('roles', ['USER']) # Default to USER role
+    roles_list = data.get('roles', ['USER'])
 
-    if not username or not email or not password:
+    if not carnet or not names or not paternal_surname or not email or not password:
         return jsonify(msg="Missing required fields"), 400
 
-    if User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first():
+    if User.query.filter_by(carnet=carnet).first() or User.query.filter_by(email=email).first():
         return jsonify(msg="User or email already exists"), 400
 
     is_strong, msg = validate_password(password)
     if not is_strong:
         return jsonify(msg=msg), 400
 
-    new_user = User(username=username, email=email)
+    new_user = User(
+        carnet=carnet, 
+        names=names, 
+        paternal_surname=paternal_surname, 
+        maternal_surname=maternal_surname, 
+        email=email
+    )
     new_user.set_password(password)
     
     for role_name in roles_list:
@@ -95,7 +110,7 @@ def create_user():
     db.session.add(new_user)
     db.session.commit()
 
-    return jsonify(msg=f"User {username} created successfully"), 201
+    return jsonify(msg=f"User {carnet} created successfully"), 201
 
 @admin_bp.route('/users/<int:user_id>', methods=['PUT'])
 @jwt_required()
@@ -106,13 +121,22 @@ def update_user(user_id):
         return jsonify(msg="User not found"), 404
         
     data = request.get_json()
-    username = data.get('username')
+    carnet = data.get('carnet')
+    names = data.get('names')
+    paternal_surname = data.get('paternal_surname')
+    maternal_surname = data.get('maternal_surname')
     email = data.get('email')
     password = data.get('password')
     roles_list = data.get('roles')
     
-    if username:
-        user.username = username
+    if carnet:
+        user.carnet = carnet
+    if names:
+        user.names = names
+    if paternal_surname:
+        user.paternal_surname = paternal_surname
+    if maternal_surname:
+        user.maternal_surname = maternal_surname
     if email:
         user.email = email
     if password:
@@ -129,7 +153,7 @@ def update_user(user_id):
                 user.roles.append(role)
                 
     db.session.commit()
-    return jsonify(msg=f"User {user.username} updated successfully"), 200
+    return jsonify(msg=f"User {user.carnet} updated successfully"), 200
 
 @admin_bp.route('/users/<int:user_id>', methods=['DELETE'])
 @jwt_required()
@@ -141,7 +165,7 @@ def delete_user(user_id):
     
     db.session.delete(user)
     db.session.commit()
-    return jsonify(msg=f"User {user.username} deleted"), 200
+    return jsonify(msg=f"User {user_id} deleted"), 200
 
 @admin_bp.route('/roles', methods=['GET'])
 @jwt_required()
@@ -205,7 +229,7 @@ def assign_role():
         user.roles.append(role)
         db.session.commit()
     
-    return jsonify(msg=f"Role {role_name} assigned to user {user.username}"), 200
+    return jsonify(msg=f"Role {role_name} assigned to user CI: {user.carnet}"), 200
 
 @admin_bp.route('/remove-role', methods=['POST'])
 @jwt_required()
@@ -225,4 +249,4 @@ def remove_role():
         user.roles.remove(role)
         db.session.commit()
     
-    return jsonify(msg=f"Role {role_name} removed from user {user.username}"), 200
+    return jsonify(msg=f"Role {role_name} removed from user CI: {user.carnet}"), 200

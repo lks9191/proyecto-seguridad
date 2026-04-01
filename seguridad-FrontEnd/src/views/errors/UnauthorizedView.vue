@@ -4,16 +4,17 @@
       <div class="icon-block">
         <span class="lock-icon">🚫</span>
       </div>
-      
+
       <h1>403 - ACCESO DENEGADO</h1>
       <h2>Lo sentimos, no tienes permisos suficientes.</h2>
-      
+
       <p class="description">
-        Has intentado acceder a una ruta protegida. El <strong>Principio de Mínimo Privilegio</strong> y el control de acceso basado en roles (<strong>RBAC</strong>) de este sistema han bloqueado tu solicitud.
+        Has intentado acceder a una ruta protegida. El <strong>Principio de Mínimo Privilegio</strong> y el control de
+        acceso basado en roles (<strong>RBAC</strong>) de este sistema han bloqueado tu solicitud.
       </p>
 
       <div class="details-box">
-        <p><strong>Usuario actual:</strong> {{ authStore.username || 'Sesión no iniciada' }}</p>
+        <p><strong>Carnet de Identidad (CI):</strong> {{ authStore.carnet || 'Sesión no iniciada' }}</p>
         <p><strong>Tu Rol asignado:</strong> <span class="role-badge">{{ authStore.role || 'Ninguno' }}</span></p>
       </div>
 
@@ -83,8 +84,8 @@ const goBackToSafety = () => {
   width: 100%;
   text-align: center;
   box-shadow: 0 0 15px rgba(220, 53, 69, 0.4),
-              0 0 30px rgba(220, 53, 69, 0.2),
-              inset 0 0 10px rgba(220, 53, 69, 0.1);
+    0 0 30px rgba(220, 53, 69, 0.2),
+    inset 0 0 10px rgba(220, 53, 69, 0.1);
   border: 1px solid rgba(220, 53, 69, 0.3);
   box-sizing: border-box;
 }
@@ -96,7 +97,8 @@ const goBackToSafety = () => {
 }
 
 h1 {
-  color: #ff4d4d; /* Rojo neón */
+  color: #ff4d4d;
+  /* Rojo neón */
   margin: 0;
   font-size: 1.8rem;
   letter-spacing: 1px;
@@ -138,7 +140,8 @@ h2 {
 }
 
 .details-box strong {
-  color: #0096ff; /* Etiquetas en azul */
+  color: #0096ff;
+  /* Etiquetas en azul */
 }
 
 .role-badge {

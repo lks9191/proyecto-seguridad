@@ -20,7 +20,10 @@ def get_profile():
         return jsonify(msg="User not found"), 404
         
     return jsonify(
-        username=user.username,
+        carnet=user.carnet,
+        names=user.names,
+        paternal_surname=user.paternal_surname,
+        maternal_surname=user.maternal_surname,
         email=user.email,
         roles=[role.name for role in user.roles],
         is_2fa_enabled=user.is_2fa_enabled,
@@ -37,12 +40,21 @@ def update_profile():
     if not user:
         return jsonify(msg="User not found"), 404
         
-    username = data.get('username')
+    carnet = data.get('username') # Reusing key 'username' for frontend compatibility or updating it
+    names = data.get('names')
+    paternal_surname = data.get('paternal_surname')
+    maternal_surname = data.get('maternal_surname')
     email = data.get('email')
     password = data.get('password')
     
-    if username:
-        user.username = username
+    if carnet:
+        user.carnet = carnet
+    if names:
+        user.names = names
+    if paternal_surname:
+        user.paternal_surname = paternal_surname
+    if maternal_surname:
+        user.maternal_surname = maternal_surname
     if email:
         user.email = email
     if password:

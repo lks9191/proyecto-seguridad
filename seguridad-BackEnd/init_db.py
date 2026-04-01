@@ -28,22 +28,49 @@ def init_db():
         # 4. Crear usuarios solicitados
         print("Creando usuarios por defecto...")
         users_data = [
-            {'username': 'admin', 'email': 'admin@example.com', 'role': 'ADMIN'},
-            {'username': 'auditor', 'email': 'auditor@example.com', 'role': 'AUDITOR'},
-            {'username': 'user', 'email': 'user@example.com', 'role': 'USER'},
+            {
+                'carnet': '1234567', 
+                'email': 'admin@example.com', 
+                'role': 'ADMIN',
+                'names': 'Administrador',
+                'paternal_surname': 'Sistema',
+                'maternal_surname': 'SUT'
+            },
+            {
+                'carnet': '7654321', 
+                'email': 'auditor@example.com', 
+                'role': 'AUDITOR',
+                'names': 'Auditor',
+                'paternal_surname': 'Transparencia',
+                'maternal_surname': 'Nacional'
+            },
+            {
+                'carnet': '1010101', 
+                'email': 'user@example.com', 
+                'role': 'USER',
+                'names': 'Juan',
+                'paternal_surname': 'Ciudadano',
+                'maternal_surname': 'Boliviano'
+            },
         ]
         
         password = "password123!"
         
         for data in users_data:
-            user = User(username=data['username'], email=data['email'])
+            user = User(
+                carnet=data['carnet'], 
+                email=data['email'],
+                names=data['names'],
+                paternal_surname=data['paternal_surname'],
+                maternal_surname=data['maternal_surname']
+            )
             user.set_password(password)
             user.roles.append(roles[data['role']])
             db.session.add(user)
         
         db.session.commit()
         print("Base de datos inicializada con éxito!")
-        print(f"Usuarios creados: admin@example.com, auditor@example.com, user@example.com")
+        print("CIs creados: 1234567 (Admin), 7654321 (Auditor), 1010101 (User)")
         print(f"Contraseña común: {password}")
 
 if __name__ == "__main__":

@@ -48,7 +48,6 @@ export function useAdmin() {
   }
 
   const deleteUser = async (userId) => {
-    if (!confirm('¿Estás seguro de eliminar este usuario?')) return
     try {
       await api.delete(`/admin/users/${userId}`)
       message.value = 'Usuario eliminado.'

@@ -12,7 +12,7 @@
 
         <div class="header-actions">
           <div v-if="profile" class="admin-profile-badge">
-            <span class="username">{{ profile.username }}</span>
+            <span class="username">{{ profile.carnet }}</span>
             <span :class="['status-dot', profile.is_2fa_enabled ? 'active' : 'inactive']"
               :title="profile.is_2fa_enabled ? '2FA Activo' : '2FA Inactivo'"></span>
             <button @click="openTwoFAModal" class="mini-2fa-btn">
@@ -21,7 +21,7 @@
           </div>
 
           <button @click="refresh" class="gov-btn-outline-light">Refrescar</button>
-          <button @click="handleLogout" class="gov-logout-btn">Cerrar Sesión</button>
+          <button @click="handleConfirmLogout" class="gov-btn-logout">Cerrar Sesión</button>
         </div>
       </div>
     </header>
@@ -57,17 +57,17 @@
               <table>
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Usuario / Documento</th>
-                    <th>Correo Electrónico</th>
-                    <th>Roles Asignados</th>
+                    <th>CI / Carnet</th>
+                    <th>Nombres y Apellidos</th>
+                    <th>Correo</th>
+                    <th>Roles</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="user in users" :key="user.id">
-                    <td class="fw-bold">{{ user.id }}</td>
-                    <td>{{ user.username }}</td>
+                    <td class="mono-text">{{ user.carnet }}</td>
+                    <td>{{ user.names }} {{ user.paternal_surname }} {{ user.maternal_surname || '' }}</td>
                     <td>{{ user.email }}</td>
                     <td>
                       <span v-for="r in user.roles" :key="r" :class="['role-badge', r.toLowerCase()]">
@@ -76,7 +76,7 @@
                     </td>
                     <td>
                       <button @click="openEditModal(user)" class="gov-btn-outline-small">Editar</button>
-                      <button @click="deleteUser(user.id)" class="gov-btn-danger-icon"
+                      <button @click="handleDeleteUser(user.id)" class="gov-btn-danger-icon"
                         title="Eliminar Usuario">🗑️</button>
                     </td>
                   </tr>
@@ -118,7 +118,8 @@
               <table>
                 <thead>
                   <tr>
-                    <th>Usuario conectado</th>
+                    <th>Identificación (CI)</th>
+                    <th>Nombre Completo</th>
                     <th>Dirección IP</th>
                     <th>Hora de Inicio</th>
                     <th>Expira en</th>
@@ -127,6 +128,7 @@
                 <tbody>
                   <tr v-for="s in activeSessions" :key="s.id">
                     <td class="fw-bold">{{ s.username }}</td>
+                    <td>{{ s.full_name }}</td>
                     <td class="mono-text">{{ s.ip_address }}</td>
                     <td>{{ formatDate(s.login_at) }}</td>
                     <td><span class="event-badge warning">{{ formatDate(s.expires_at) }}</span></td>
@@ -140,17 +142,19 @@
               <table>
                 <thead>
                   <tr>
-                    <th>Usuario</th>
-                    <th>Login (Fecha/Hora)</th>
-                    <th>Obs. Login</th>
-                    <th>Logout (Fecha/Hora)</th>
-                    <th>Obs. Logout</th>
+                    <th>CI</th>
+                    <th>Nombre Completo</th>
+                    <th>Login</th>
+                    <th>Obs.</th>
+                    <th>Logout</th>
+                    <th>Obs.</th>
                     <th>IP</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="h in sessionHistory" :key="h.id">
                     <td class="fw-bold">{{ h.username }}</td>
+                    <td>{{ h.full_name }}</td>
                     <td>{{ formatDate(h.login_at) }}</td>
                     <td><small>{{ h.login_obs }}</small></td>
                     <td>{{ h.is_active ? 'ACTIVA' : formatDate(h.logout_at) }}</td>
@@ -179,21 +183,42 @@
         </div>
 
         <form @submit.prevent="handleSubmitUser">
-          <div class="input-group">
-            <label>Identificación (Usuario / Documento)</label>
-            <input v-model="userForm.username" required class="gov-input">
+          <div class="row-inputs">
+            <div class="input-group">
+              <label>Carnet de Identidad (CI)</label>
+              <input v-model="userForm.carnet" required class="gov-input" placeholder="Ej: 8765432">
+            </div>
+            <div class="input-group">
+              <label>Correo Electrónico</label>
+              <input v-model="userForm.email" type="email" required class="gov-input" placeholder="correo@ejemplo.com">
+            </div>
           </div>
+
           <div class="input-group">
-            <label>Correo Electrónico Institucional/Personal</label>
-            <input v-model="userForm.email" type="email" required class="gov-input">
+            <label>Nombres</label>
+            <input v-model="userForm.names" required class="gov-input" placeholder="Ej: Juan Alberto">
           </div>
-          <div class="input-group">
-            <label>{{ isEditing ? 'Nueva Contraseña (Opcional)' : 'Contraseña Segura' }}</label>
-            <input v-model="userForm.password" type="password" :required="!isEditing" class="gov-input">
+
+          <div class="row-inputs">
+            <div class="input-group">
+              <label>Apellido Paterno</label>
+              <input v-model="userForm.paternal_surname" required class="gov-input" placeholder="Ej: Quispe">
+            </div>
+            <div class="input-group">
+              <label>Apellido Materno</label>
+              <input v-model="userForm.maternal_surname" class="gov-input" placeholder="Ej: Mamani">
+            </div>
           </div>
-          <div class="input-group" v-if="!isEditing || userForm.password">
-            <label>Confirmar Contraseña</label>
-            <input v-model="userForm.confirmPassword" type="password" required class="gov-input">
+
+          <div class="row-inputs">
+            <div class="input-group">
+              <label>{{ isEditing ? 'Nueva Contraseña (Opcional)' : 'Contraseña Segura' }}</label>
+              <input v-model="userForm.password" type="password" :required="!isEditing" class="gov-input">
+            </div>
+            <div class="input-group" v-if="!isEditing || userForm.password">
+              <label>Confirmar Contraseña</label>
+              <input v-model="userForm.confirmPassword" type="password" required class="gov-input">
+            </div>
           </div>
           <div class="input-group">
             <label>Privilegios (Roles RBAC)</label>
@@ -270,6 +295,13 @@
         </form>
       </div>
     </div>
+
+    <!-- Modales Genéricos -->
+    <ModalConfirmacion :show="confirmModal.show" :title="confirmModal.title" :message="confirmModal.message"
+      :confirmText="confirmModal.confirmText" @cancel="confirmModal.show = false" @confirm="handleConfirmedAction" />
+
+    <ModalAviso :show="noticeModal.show" :title="noticeModal.title" :message="noticeModal.message"
+      :type="noticeModal.type" @close="noticeModal.show = false" />
   </div>
 </template>
 
@@ -277,6 +309,8 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useAdmin } from '@/composables/useAdmin'
 import { useUser } from '@/composables/useUser'
+import ModalConfirmacion from '@/components/common/ModalConfirmacion.vue'
+import ModalAviso from '@/components/common/ModalAviso.vue'
 
 const {
   users, roles, activeSessions, sessionHistory,
@@ -293,6 +327,25 @@ const isSubmitting = ref(false)
 const editingUserId = ref(null)
 const newRoleName = ref('')
 const modalError = ref('')
+
+// Estados para Modales Genéricos
+const confirmModal = ref({ show: false, title: '', message: '', confirmText: 'Confirmar', action: null })
+const noticeModal = ref({ show: false, title: '', message: '', type: 'info' })
+
+const showAlert = (title, message, type = 'info') => {
+  noticeModal.value = { show: true, title, message, type }
+}
+
+const showConfirm = (title, message, confirmText, action) => {
+  confirmModal.value = { show: true, title, message, confirmText, action }
+}
+
+const handleConfirmedAction = async () => {
+  if (confirmModal.value.action) {
+    await confirmModal.value.action()
+  }
+  confirmModal.value.show = false
+}
 
 // Roles logic
 const showRoleModal = ref(false)
@@ -335,10 +388,15 @@ const handleConfirm2FA = async () => {
 }
 
 const handleDisable2FA = async () => {
-  if (confirm('Atención: Desactivar el 2FA en una cuenta de Administrador es un riesgo crítico. ¿Continuar?')) {
-    await disable2FA()
-    showTwoFAModal.value = false
-  }
+  showConfirm(
+    'Desactivar 2FA',
+    'Atención: Desactivar el 2FA en una cuenta de Administrador es un riesgo crítico. ¿Continuar?',
+    'Desactivar',
+    async () => {
+      await disable2FA()
+      showTwoFAModal.value = false
+    }
+  )
 }
 
 watch(message, (newVal) => {
@@ -347,11 +405,29 @@ watch(message, (newVal) => {
   }
 })
 
-const userForm = ref({ username: '', email: '', password: '', confirmPassword: '', roles: ['USER'] })
+const userForm = ref({
+  carnet: '',
+  email: '',
+  names: '',
+  paternal_surname: '',
+  maternal_surname: '',
+  password: '',
+  confirmPassword: '',
+  roles: ['USER']
+})
 
 const openCreateModal = () => {
   isEditing.value = false
-  userForm.value = { username: '', email: '', password: '', confirmPassword: '', roles: ['USER'] }
+  userForm.value = {
+    carnet: '',
+    email: '',
+    names: '',
+    paternal_surname: '',
+    maternal_surname: '',
+    password: '',
+    confirmPassword: '',
+    roles: ['USER']
+  }
   modalError.value = ''
   showUserModal.value = true
 }
@@ -359,7 +435,16 @@ const openCreateModal = () => {
 const openEditModal = (user) => {
   isEditing.value = true
   editingUserId.value = user.id
-  userForm.value = { username: user.username, email: user.email, password: '', confirmPassword: '', roles: [...user.roles] }
+  userForm.value = {
+    carnet: user.carnet,
+    email: user.email,
+    names: user.names,
+    paternal_surname: user.paternal_surname,
+    maternal_surname: user.maternal_surname,
+    password: '',
+    confirmPassword: '',
+    roles: [...user.roles]
+  }
   modalError.value = ''
   showUserModal.value = true
 }
@@ -382,8 +467,33 @@ const handleSubmitUser = async () => {
     success = await createUser(data)
   }
   isSubmitting.value = false
-  if (success) showUserModal.value = false
-  else modalError.value = message.value
+  if (success) {
+    showUserModal.value = false
+    showAlert('Éxito', isEditing.value ? 'Usuario actualizado correctamente.' : 'Usuario registrado con éxito.', 'success')
+  } else {
+    modalError.value = message.value
+  }
+}
+
+const handleDeleteUser = (userId) => {
+  showConfirm(
+    'Eliminar Usuario',
+    '¿Estás seguro de que deseas eliminar permanentemente este usuario? Esta acción no se puede deshacer.',
+    'Eliminar',
+    async () => {
+      await deleteUser(userId)
+      showAlert('Eliminado', 'El usuario ha sido removido del sistema.', 'info')
+    }
+  )
+}
+
+const handleConfirmLogout = () => {
+  showConfirm(
+    'Cerrar Sesión',
+    '¿Deseas finalizar tu sesión actual?',
+    'Cerrar Sesión',
+    handleLogout
+  )
 }
 
 const handleCreateRole = async () => {
@@ -529,21 +639,25 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.gov-logout-btn {
-  background-color: transparent;
-  color: #ffcccb;
-  border: 1px solid #c53030;
-  padding: 0.4rem 1rem;
+.gov-btn-logout {
+  background-color: #c53030;
+  color: #ffffff;
+  border: 1px solid #9b1c1c;
+  padding: 0.5rem 1.2rem;
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.gov-logout-btn:hover {
-  background-color: #c53030;
-  color: white;
+.gov-btn-logout:hover {
+  background-color: #9b1c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* --- CONTENIDO PRINCIPAL --- */

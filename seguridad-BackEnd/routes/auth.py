@@ -15,21 +15,30 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
-    username = data.get('username')
+    carnet = data.get('carnet')
+    names = data.get('names')
+    paternal_surname = data.get('paternal_surname')
+    maternal_surname = data.get('maternal_surname')
     email = data.get('email')
     password = data.get('password')
 
-    if not username or not email or not password:
+    if not carnet or not names or not paternal_surname or not email or not password:
         return jsonify(msg="Missing required fields"), 400
 
-    if User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first():
+    if User.query.filter_by(carnet=carnet).first() or User.query.filter_by(email=email).first():
         return jsonify(msg="User or email already exists"), 400
 
     is_strong, msg = validate_password(password)
     if not is_strong:
         return jsonify(msg=msg), 400
 
-    new_user = User(username=username, email=email)
+    new_user = User(
+        carnet=carnet, 
+        names=names, 
+        paternal_surname=paternal_surname, 
+        maternal_surname=maternal_surname, 
+        email=email
+    )
     new_user.set_password(password)
     
     # Assign default role
@@ -48,16 +57,16 @@ def register():
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
-    username = data.get('username')
+    carnet = data.get('username') # Keeping 'username' in JSON for minor frontend compatibility or changing it
     password = data.get('password')
     requested_role = data.get('role')
 
-    user = User.query.filter_by(username=username).first()
+    user = User.query.filter_by(carnet=carnet).first()
     
     ip_address = request.remote_addr
 
     if not user or not user.check_password(password):
-        log = AuditLog(user_id=user.id if user else None, action='LOGIN_FAILED', ip_address=ip_address, details=f"Fallido para: {username}")
+        log = AuditLog(user_id=user.id if user else None, action='LOGIN_FAILED', ip_address=ip_address, details=f"Fallido para CI: {carnet}")
         db.session.add(log)
         db.session.commit()
         return jsonify(msg="Credenciales incorrectas"), 401
@@ -156,7 +165,12 @@ def verify_2fa():
         db.session.add(log)
         db.session.commit()
         
-        return jsonify(access_token=access_token, roles=user_roles, active_role=primary_role), 200
+        return jsonify(
+            access_token=access_token, 
+            roles=user_roles, 
+            active_role=primary_role,
+            username=user.carnet
+        ), 200
     
     log = AuditLog(user_id=user.id, action='LOGIN_FAILED_2FA', ip_address=request.remote_addr)
     db.session.add(log)
@@ -177,7 +191,7 @@ def setup_2fa():
     user.totp_secret = secret
     db.session.commit()
     
-    uri = get_totp_uri(user.username, secret)
+    uri = get_totp_uri(user.carnet, secret)
     return jsonify(secret=secret, qr_uri=uri), 200
 
 @auth_bp.route('/enable-2fa', methods=['POST'])

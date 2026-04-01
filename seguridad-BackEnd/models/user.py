@@ -10,7 +10,10 @@ user_roles = db.Table('user_roles',
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
+    carnet = db.Column(db.String(20), unique=True, nullable=False)
+    names = db.Column(db.String(100), nullable=False)
+    paternal_surname = db.Column(db.String(100), nullable=False)
+    maternal_surname = db.Column(db.String(100), nullable=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     totp_secret = db.Column(db.String(32))
@@ -30,4 +33,4 @@ class User(db.Model):
         return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
 
     def __repr__(self):
-        return f'<User {self.username}>'
+        return f'<User {self.carnet}>'
