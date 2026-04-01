@@ -12,7 +12,7 @@
 
         <div class="header-actions">
           <div v-if="profile" class="admin-profile-badge">
-            <span class="username">{{ profile.username }}</span>
+            <span class="username">{{ profile.carnet }}</span>
             <span :class="['status-dot', profile.is_2fa_enabled ? 'active' : 'inactive']"
               :title="profile.is_2fa_enabled ? '2FA Activo' : '2FA Inactivo'"></span>
             <button @click="openTwoFAModal" class="mini-2fa-btn">
@@ -21,7 +21,7 @@
           </div>
 
           <button @click="refresh" class="gov-btn-outline-light">Refrescar</button>
-          <button @click="handleLogout" class="gov-logout-btn">Cerrar Sesión</button>
+          <button @click="handleConfirmLogout" class="gov-btn-logout">Cerrar Sesión</button>
         </div>
       </div>
     </header>
@@ -31,6 +31,9 @@
         <h2>Panel de Auditoría y Transparencia</h2>
         <p class="subtitle">Monitoreo de Solo Lectura para garantizar la Integridad del sistema.</p>
       </div>
+
+      <ModalConfirmacion :show="showConfirm" :title="confirmData.title" :message="confirmData.message"
+        @cancel="showConfirm = false" @confirm="handleConfirmAction" />
 
       <div v-if="message" class="alert-info" @click="message = ''">
         {{ message }}
@@ -148,6 +151,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useAuditor } from '@/composables/useAuditor'
 import { useUser } from '@/composables/useUser'
+import ModalConfirmacion from '@/components/common/ModalConfirmacion.vue'
 
 const {
   activeSessions,
@@ -184,11 +188,29 @@ const handleConfirm2FA = async () => {
   isVerifying.value = false
 }
 
+const showConfirm = ref(false)
+const confirmData = ref({ title: '', message: '', action: null })
+
+const requestConfirm = (title, message, action) => {
+  confirmData.value = { title, message, action }
+  showConfirm.value = true
+}
+
+const handleConfirmAction = async () => {
+  if (confirmData.value.action) await confirmData.value.action()
+  showConfirm.value = false
+}
+
+const handleConfirmLogout = () => {
+  requestConfirm('Cerrar Sesión', '¿Está seguro de que desea salir del sistema?', handleLogout)
+}
+
 const handleDisable2FA = async () => {
-  if (confirm('Atención: Desactivar el 2FA disminuye la seguridad de sus accesos. ¿Desea continuar?')) {
-    await disable2FA()
-    showTwoFAModal.value = false
-  }
+  requestConfirm(
+    'Desactivar 2FA',
+    'Atención: Desactivar el 2FA disminuye la seguridad de sus accesos. ¿Desea continuar?',
+    disable2FA
+  )
 }
 
 const formatDate = (dateStr) => {
@@ -335,21 +357,25 @@ const getEventClass = (event) => {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.gov-logout-btn {
-  background-color: transparent;
-  color: #ffcccb;
-  border: 1px solid #c53030;
-  padding: 0.4rem 1rem;
+.gov-btn-logout {
+  background-color: #c53030;
+  color: #ffffff;
+  border: 1px solid #9b1c1c;
+  padding: 0.5rem 1.2rem;
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.gov-logout-btn:hover {
-  background-color: #c53030;
-  color: white;
+.gov-btn-logout:hover {
+  background-color: #9b1c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* --- CONTENIDO PRINCIPAL --- */

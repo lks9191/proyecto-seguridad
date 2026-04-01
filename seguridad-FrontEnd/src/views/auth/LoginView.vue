@@ -19,8 +19,8 @@
         
         <form @submit.prevent="submitLogin">
           <div class="input-group">
-            <label for="username">Usuario / Documento</label>
-            <input id="username" v-model="username" type="text" required autocomplete="username" class="gov-input" />
+            <label for="username">Carnet de Identidad (CI)</label>
+            <input id="username" v-model="username" type="text" required autocomplete="username" class="gov-input" placeholder="Ingrese su número de carnet" />
           </div>
 
           <div class="input-group">

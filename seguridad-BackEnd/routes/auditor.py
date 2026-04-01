@@ -14,7 +14,8 @@ def get_active_sessions():
     active_sessions = Session.query.filter_by(is_active=True).all()
     return jsonify([{
         'id': s.id,
-        'username': s.user.username,
+        'username': s.user.carnet,
+        'full_name': f"{s.user.names} {s.user.paternal_surname} {s.user.maternal_surname or ''}".strip(),
         'ip_address': s.ip_address,
         'login_at': s.login_at,
         'expires_at': s.expires_at
@@ -28,7 +29,8 @@ def get_session_history():
     sessions = Session.query.order_by(Session.login_at.desc()).all()
     return jsonify([{
         'id': s.id,
-        'username': s.user.username,
+        'username': s.user.carnet,
+        'full_name': f"{s.user.names} {s.user.paternal_surname} {s.user.maternal_surname or ''}".strip(),
         'login_at': s.login_at,
         'login_obs': s.login_obs,
         'logout_at': s.logout_at,
@@ -46,7 +48,7 @@ def get_logs():
     return jsonify([{
         'id': log.id,
         'user_id': log.user_id,
-        'username': log.user.username if log.user else 'SISTEMA',
+        'username': log.user.carnet if log.user else 'SISTEMA',
         'action': log.action,
         'ip_address': log.ip_address,
         'timestamp': log.timestamp,

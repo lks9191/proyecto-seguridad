@@ -10,7 +10,7 @@
           </div>
         </div>
         <div class="header-actions">
-           <button @click="handleLogout" class="gov-logout-btn">Cerrar Sesión</button>
+          <button @click="handleConfirmLogout" class="gov-btn-logout">Cerrar Sesión</button>
         </div>
       </div>
     </header>
@@ -21,6 +21,12 @@
         <p class="subtitle">Bienvenido a la Sede Electrónica</p>
       </div>
 
+      <ModalConfirmacion :show="confirmModal.show" :title="confirmModal.title" :message="confirmModal.message"
+        @cancel="confirmModal.show = false" @confirm="handleConfirmedAction" />
+
+      <ModalAviso :show="noticeModal.show" :title="noticeModal.title" :message="noticeModal.message"
+        :type="noticeModal.type" @close="noticeModal.show = false" />
+
       <div v-if="message" class="alert-info" @click="message = ''">
         {{ message }}
       </div>
@@ -29,22 +35,13 @@
 
       <div v-else>
         <div class="content-grid">
-          <UserProfileCard 
-            :profile="profile" 
-            @open-edit="showUpdateModal = true"
-            @setup-2fa="openTwoFAModal"
-            @disable-2fa="handleDisable2FA"
-          />
-          
-          <PublicNoticesCard 
-            :publicData="publicData" 
-          />
+          <UserProfileCard :profile="profile" @open-edit="showUpdateModal = true" @setup-2fa="openTwoFAModal"
+            @disable-2fa="handleDisable2FA" />
+
+          <PublicNoticesCard :publicData="publicData" />
         </div>
 
-        <TramitesListCard 
-          :tramites="misTramites" 
-          @open-new-tramite="showNewTramiteModal = true" 
-        />
+        <TramitesListCard :tramites="misTramites" @open-new-tramite="showNewTramiteModal = true" />
       </div>
     </main>
 
@@ -56,11 +53,18 @@
       <div class="gov-modal-content">
         <h3>Editar Mi Perfil</h3>
         <p class="modal-subtitle">Actualice su información de contacto ciudadana.</p>
-        
+
         <form @submit.prevent="handleUpdate">
           <div class="input-group">
-            <label>Nuevo Usuario / Documento</label>
-            <input v-model="editForm.username" class="gov-input" :placeholder="profile?.username">
+            <label>Nombres y Apellidos</label>
+            <div class="row-inputs">
+              <input v-model="editForm.names" class="gov-input" placeholder="Nombres">
+              <input v-model="editForm.paternal_surname" class="gov-input" placeholder="Ap. Paterno">
+            </div>
+          </div>
+          <div class="input-group">
+            <label>Carnet de Identidad (CI)</label>
+            <input v-model="editForm.username" class="gov-input" :placeholder="profile?.carnet">
           </div>
           <div class="input-group">
             <label>Nuevo Correo Electrónico</label>
@@ -84,9 +88,10 @@
     <div v-if="showTwoFAModal" class="gov-modal-overlay">
       <div class="gov-modal-content">
         <h3>Configurar Segundo Factor (2FA)</h3>
-        
+
         <div v-if="twoFAStep === 'request'">
-          <p class="modal-subtitle">Para activar la autenticación de dos factores, enviaremos un código de seguridad a su correo institucional: <strong>{{ profile?.email }}</strong></p>
+          <p class="modal-subtitle">Para activar la autenticación de dos factores, enviaremos un código de seguridad a
+            su correo institucional: <strong>{{ profile?.email }}</strong></p>
           <div class="modal-actions">
             <button @click="showTwoFAModal = false" class="gov-btn-secondary">Cancelar</button>
             <button @click="handleRequestOTP" class="gov-btn-primary" :disabled="isVerifying">
@@ -94,7 +99,7 @@
             </button>
           </div>
         </div>
-        
+
         <div v-else>
           <p class="modal-subtitle">Ingrese el código de 6 dígitos enviado a su correo.</p>
           <div class="input-group">
@@ -114,7 +119,7 @@
       <div class="gov-modal-content">
         <h3>Iniciar Nuevo Trámite</h3>
         <p class="modal-subtitle">Seleccione el tipo de certificado que desea solicitar a la administración pública.</p>
-        
+
         <form @submit.prevent="simularNuevoTramite">
           <div class="input-group">
             <label>Tipo de Trámite</label>
@@ -127,7 +132,7 @@
               <option value="matrimonio">Certificado de Matrimonio</option>
             </select>
           </div>
-          
+
           <div class="modal-actions">
             <button type="button" @click="showNewTramiteModal = false" class="gov-btn-secondary">Cancelar</button>
             <button type="submit" class="gov-btn-primary">Solicitar Aprobación</button>
@@ -141,6 +146,8 @@
 <script setup>
 import { ref } from 'vue'
 import { useUser } from '@/composables/useUser'
+import ModalConfirmacion from '@/components/common/ModalConfirmacion.vue'
+import ModalAviso from '@/components/common/ModalAviso.vue'
 
 import UserProfileCard from '@/components/dashboard/UserProfileCard.vue'
 import PublicNoticesCard from '@/components/dashboard/PublicNoticesCard.vue'
@@ -159,7 +166,28 @@ const twoFAStep = ref('request')
 const otpToken = ref('')
 const isVerifying = ref(false)
 const isUpdating = ref(false)
-const editForm = ref({ username: '', email: '', password: '' })
+const editForm = ref({ username: '', email: '', password: '', names: '', paternal_surname: '', maternal_surname: '' })
+
+// Estados para modales genéricos
+const confirmModal = ref({ show: false, title: '', message: '', action: null })
+const noticeModal = ref({ show: false, title: '', message: '', type: 'info' })
+
+const showAlert = (title, message, type = 'info') => {
+  noticeModal.value = { show: true, title, message, type }
+}
+
+const showConfirm = (title, message, action) => {
+  confirmModal.value = { show: true, title, message, action }
+}
+
+const handleConfirmedAction = async () => {
+  if (confirmModal.value.action) await confirmModal.value.action()
+  confirmModal.value.show = false
+}
+
+const handleConfirmLogout = () => {
+  showConfirm('Cerrar Sesión', '¿Está seguro de que desea salir?', handleLogout)
+}
 
 const misTramites = ref([
   { id: 'SUT-0089', tipo: 'Certificado de Nacimiento Original', fecha: '2026-03-20', estado: 'Aprobado', estadoClass: 'success' },
@@ -168,7 +196,7 @@ const misTramites = ref([
 ])
 
 const simularNuevoTramite = () => {
-  alert('Simulación: Solicitud enviada correctamente. Un administrador revisará su petición.')
+  showAlert('Trámite Iniciado', 'Solicitud enviada correctamente. Un administrador revisará su petición.', 'success')
   showNewTramiteModal.value = false
 }
 
@@ -207,9 +235,14 @@ const handleConfirm2FA = async () => {
 }
 
 const handleDisable2FA = async () => {
-  if (confirm('¿Está seguro de desactivar el 2FA? Su cuenta será menos segura.')) {
-    await disable2FA()
-  }
+  showConfirm(
+    'Desactivar 2FA',
+    '¿Está seguro de desactivar el 2FA? Su cuenta será menos segura.',
+    async () => {
+      await disable2FA()
+      showAlert('Seguridad', 'El Segundo Factor ha sido desactivado.', 'info')
+    }
+  )
 }
 </script>
 
@@ -269,21 +302,25 @@ const handleDisable2FA = async () => {
   color: #a0aab2;
 }
 
-.gov-logout-btn {
-  background-color: transparent;
-  color: #ffcccb;
-  border: 1px solid #c53030;
-  padding: 0.4rem 1rem;
+.gov-btn-logout {
+  background-color: #c53030;
+  color: #ffffff;
+  border: 1px solid #9b1c1c;
+  padding: 0.5rem 1.2rem;
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.gov-logout-btn:hover {
-  background-color: #c53030;
-  color: white;
+.gov-btn-logout:hover {
+  background-color: #9b1c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* --- CONTENIDO PRINCIPAL --- */
@@ -346,7 +383,8 @@ const handleDisable2FA = async () => {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(44, 49, 54, 0.7); /* Gris oscuro semi-transparente */
+  background: rgba(44, 49, 54, 0.7);
+  /* Gris oscuro semi-transparente */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -391,7 +429,8 @@ const handleDisable2FA = async () => {
   font-weight: 600;
 }
 
-.gov-input, .gov-select {
+.gov-input,
+.gov-select {
   background: #ffffff;
   color: #2d3748;
   border: 1px solid #cbd5e0;
@@ -403,7 +442,8 @@ const handleDisable2FA = async () => {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.gov-input:focus, .gov-select:focus {
+.gov-input:focus,
+.gov-select:focus {
   border-color: #0056b3;
   box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
 }
@@ -475,8 +515,18 @@ const handleDisable2FA = async () => {
 }
 
 @media (max-width: 768px) {
-  .content-grid { grid-template-columns: 1fr; }
-  .header-content { flex-direction: column; gap: 1rem; text-align: center; }
-  .dashboard-main { padding: 1rem; }
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .header-content {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .dashboard-main {
+    padding: 1rem;
+  }
 }
 </style>

@@ -7,10 +7,14 @@ import api from '@/services/api'
 export function useRegister() {
   const router = useRouter()
 
-  const username = ref('')
+  const carnet = ref('')
+  const names = ref('')
+  const paternal_surname = ref('')
+  const maternal_surname = ref('')
   const email = ref('')
   const password = ref('')
   const confirmPassword = ref('')
+  const registrationSuccess = ref(false)
 
   const errorMessage = ref('')
   const isLoading = ref(false)
@@ -27,14 +31,15 @@ export function useRegister() {
 
     try {
       await api.post('/auth/register', {
-        username: username.value,
+        carnet: carnet.value,
+        names: names.value,
+        paternal_surname: paternal_surname.value,
+        maternal_surname: maternal_surname.value,
         email: email.value,
         password: password.value
       })
 
-      alert('Registro exitoso. Ahora puedes iniciar sesión.')
-      router.push({ name: 'login' })
-
+      registrationSuccess.value = true
     } catch (error) {
       if (error.response && error.response.data) {
         errorMessage.value = error.response.data.msg || 'Error al registrar usuario.'
@@ -47,10 +52,14 @@ export function useRegister() {
   }
 
   return {
-    username,
+    carnet,
+    names,
+    paternal_surname,
+    maternal_surname,
     email,
     password,
     confirmPassword,
+    registrationSuccess,
     errorMessage,
     isLoading,
     submitRegister

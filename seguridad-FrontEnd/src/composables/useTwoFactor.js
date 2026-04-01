@@ -21,10 +21,8 @@ export function useTwoFactor() {
         token: totpCode.value
       })
 
-      const { access_token, active_role } = response.data
-
-      // Update store and local storage with the active role
-      authStore.login(access_token, active_role)
+      const { access_token, active_role, username: userCarnet } = response.data
+      authStore.login(access_token, active_role, userCarnet)
 
       // Redirect based on the active role
       if (active_role === 'ADMIN') router.push({ name: 'admin-dashboard' })

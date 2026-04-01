@@ -20,8 +20,26 @@
         <form @submit.prevent="submitRegister">
           
           <div class="input-group">
-            <label for="username">Usuario / Documento</label>
-            <input id="username" v-model="username" type="text" required autocomplete="username" class="gov-input" />
+            <label for="carnet">Carnet de Identidad (CI)</label>
+            <input id="carnet" v-model="carnet" type="text" required placeholder="Ej: 1234567" class="gov-input" />
+          </div>
+
+          <div class="row-inputs">
+            <div class="input-group">
+              <label for="names">Nombres</label>
+              <input id="names" v-model="names" type="text" required placeholder="Ej: Juan Carlos" class="gov-input" />
+            </div>
+          </div>
+
+          <div class="row-inputs">
+            <div class="input-group">
+              <label for="paternal_surname">Apellido Paterno</label>
+              <input id="paternal_surname" v-model="paternal_surname" type="text" required placeholder="Ej: Perez" class="gov-input" />
+            </div>
+            <div class="input-group">
+              <label for="maternal_surname">Apellido Materno</label>
+              <input id="maternal_surname" v-model="maternal_surname" type="text" placeholder="Ej: Rodriguez" class="gov-input" />
+            </div>
           </div>
 
           <div class="input-group">
@@ -55,6 +73,14 @@
       </div>
     </main>
 
+    <ModalAviso 
+      :show="registrationSuccess" 
+      title="Registro Exitoso" 
+      message="Su cuenta ha sido creada correctamente. Ahora puede iniciar sesión con su número de carnet."
+      type="success"
+      @close="$router.push({ name: 'login' })"
+    />
+
     <footer class="gov-footer">
       <p>© 2026 Plataforma de Identidad y Trámites Digitales - SUT-BO.</p>
     </footer>
@@ -63,12 +89,17 @@
 
 <script setup>
 import { useRegister } from '@/composables/useRegister'
+import ModalAviso from '@/components/common/ModalAviso.vue'
 
 const { 
-  username, 
+  carnet,
+  names,
+  paternal_surname,
+  maternal_surname,
   email, 
   password, 
   confirmPassword, 
+  registrationSuccess,
   errorMessage, 
   isLoading, 
   submitRegister 
@@ -168,6 +199,13 @@ const {
   display: flex;
   flex-direction: column;
   margin-bottom: 1.2rem;
+  flex: 1;
+}
+
+.row-inputs {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
 }
 
 label {

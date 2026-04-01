@@ -29,10 +29,8 @@ export function useLogin() {
         localStorage.setItem('jwt', response.data.temp_token)
         router.push({ name: 'two-factor' })
       } else {
-        const { access_token, roles, active_role } = response.data
-
-        // Store active_role as the main role for this session
-        authStore.login(access_token, active_role)
+        const { access_token, roles, active_role, username: userCarnet } = response.data
+        authStore.login(access_token, active_role, userCarnet)
 
         // Redirect based on the active role
         if (active_role === 'ADMIN') router.push({ name: 'admin-dashboard' })
