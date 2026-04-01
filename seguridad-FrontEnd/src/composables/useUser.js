@@ -20,9 +20,22 @@ export function useUser() {
 
       // Some mock public data for the UI
       publicData.value = [
-        { id: 1, title: 'Política de Privacidad', content: 'Actualización sobre el manejo de 2FA y sesiones.' },
-        { id: 2, title: 'Aviso de Seguridad', content: 'Las contraseñas ahora requieren esquema fuerte (bcrypt).' }
-      ]
+  { 
+    id: 1, 
+    title: 'AGETIC: Nuevos Estándares de Credenciales', 
+    content: 'En el marco de la campaña "Protege tu información", AGETIC establece que las contraseñas para servicios estatales deben tener al menos 12 caracteres, combinando mayúsculas, minúsculas, números y símbolos.' 
+  },
+  { 
+    id: 2, 
+    title: 'Congreso de Ciberseguridad (CITC)', 
+    content: 'Concluye con éxito el Congreso Internacional de Tecnología y Ciberseguridad en La Paz, enfocado en infraestructura tecnológica, hacking ético y respuesta ante incidentes en el Estado.' 
+  },
+  { 
+    id: 3, 
+    title: 'Ciudadanía Digital exige Autenticación 2FA', 
+    content: 'Para garantizar el no repudio y la integridad en la Sede Electrónica, todos los trámites de alta confidencialidad ahora requieren verificación por código de un solo uso (OTP) al correo o celular.' 
+  }
+]
     } catch (error) {
       console.error(error)
       message.value = 'Error al cargar tu perfil.'
